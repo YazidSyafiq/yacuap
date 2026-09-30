@@ -92,23 +92,24 @@ export async function addTrack(_prev: FormState, formData: FormData): Promise<Fo
   return { ok: "Lagunya masuk. Judul dan artisnya bisa dirapikan di bawah." };
 }
 
-export async function updateTrack(formData: FormData) {
+export async function updateTrack(_prev: FormState, formData: FormData): Promise<FormState> {
   const { supabase } = await requireAdmin();
   const playlistId = text(formData, "playlistId");
   const trackId = text(formData, "trackId");
   const title = text(formData, "title");
-  if (!playlistId || !trackId) return;
+  if (!playlistId || !trackId) return { error: "Lagunya tidak ditemukan." };
+  if (!title) return { error: "Judulnya tidak boleh kosong." };
 
-  if (title) {
-    await supabase.from("tracks").update({ title, artist: text(formData, "artist") }).eq("id", trackId);
-  }
-  await supabase
+  const track = await supabase.from("tracks").update({ title, artist: text(formData, "artist") }).eq("id", trackId);
+  const note = await supabase
     .from("playlist_tracks")
     .update({ note: text(formData, "note") })
     .eq("playlist_id", playlistId)
     .eq("track_id", trackId);
+  if (track.error || note.error) return { error: "Gagal menyimpan. Coba lagi." };
 
   refresh();
+  return { ok: "Tersimpan." };
 }
 
 /** Menggeser lagu satu tingkat ke atas (-1) atau ke bawah (+1). Urutan ditulis ulang supaya selalu rapat 1, 2, 3, ... */

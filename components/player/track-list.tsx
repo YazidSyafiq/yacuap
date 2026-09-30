@@ -36,7 +36,7 @@ export function PlayAllButton({ tracks }: { tracks: PlaylistTrack[] }) {
  * Catatan kenapa lagu itu masuk. Seperti caption Instagram: kalau tidak muat sebaris,
  * dipotong dengan "selengkapnya" di ujungnya; ditekan, catatannya tampil utuh.
  */
-function TrackNote({ note }: { note: string }) {
+export function TrackNote({ note, className }: { note: string; className?: string }) {
   const [open, setOpen] = useState(false);
   const [overflows, setOverflows] = useState(false);
   const boxRef = useRef<HTMLDivElement>(null);
@@ -59,7 +59,7 @@ function TrackNote({ note }: { note: string }) {
   const toggle = "relative z-10 shrink-0 font-ui text-sm font-semibold not-italic text-ink hover:underline";
 
   return (
-    <div ref={boxRef} className="mt-1.5 font-body text-[17px] italic leading-snug text-ink-soft">
+    <div ref={boxRef} className={cn("mt-1.5 font-body text-[17px] italic leading-snug text-ink-soft", className)}>
       {/* elemennya sama saat terlipat dan terbuka, hanya kelasnya yang berganti */}
       <div className={open ? undefined : "flex items-baseline gap-2"}>
         <span ref={textRef} className={open ? undefined : "min-w-0 truncate"}>

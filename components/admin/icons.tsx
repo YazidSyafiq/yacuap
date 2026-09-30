@@ -169,3 +169,10 @@ export const SearchIcon = (props: IconProps) => (
     <path d="M20 20l-4.2-4.2" />
   </Base>
 );
+
+export const NoteIcon = (props: IconProps) => (
+  <Base {...props}>
+    <path d="M5.5 4.5h13v15h-13z" />
+    <path d="M8.5 8.5h7M8.5 12h7M8.5 15.5h4" />
+  </Base>
+);
