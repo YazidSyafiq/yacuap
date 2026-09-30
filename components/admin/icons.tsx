@@ -156,3 +156,16 @@ export const CheckBadgeIcon = (props: IconProps) => (
     <path d="M8.5 12.2l2.3 2.3 4.7-4.8" />
   </Base>
 );
+
+export const TrashIcon = (props: IconProps) => (
+  <Base {...props}>
+    <path d="M4.5 7h15M9.5 7V4.5h5V7M6.5 7l.8 12h9.4l.8-12M10 11v5M14 11v5" />
+  </Base>
+);
+
+export const SearchIcon = (props: IconProps) => (
+  <Base {...props}>
+    <circle cx="11" cy="11" r="6.5" />
+    <path d="M20 20l-4.2-4.2" />
+  </Base>
+);

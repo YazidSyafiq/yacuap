@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ArrowIcon, CommentIcon, MusicIcon, PenIcon, QuoteIcon, TagIcon } from "@/components/admin/icons";
+import { ArrowIcon, MusicIcon, PenIcon, QuoteIcon, TagIcon } from "@/components/admin/icons";
 import { AdminPageHeader } from "@/components/admin/page-header";
 import { Card } from "@/components/ui/card";
 import { requireAdmin } from "@/lib/auth";
@@ -43,14 +43,14 @@ export default async function AdminHomePage() {
   const stats = [
     { label: "Tulisan terbit", value: published.count ?? 0, note: `${drafts.count ?? 0} masih draf`, icon: PenIcon, href: "/admin/tulisan" },
     { label: "Lagu di playlist", value: tracks.count ?? 0, note: "Satu playlist", icon: MusicIcon, href: "/admin/playlist" },
-    { label: "Ocehan", value: quips.count ?? 0, note: "Tampil di beranda", icon: QuoteIcon, href: "/#ocehan" },
+    { label: "Ocehan", value: quips.count ?? 0, note: "Tampil di beranda", icon: QuoteIcon, href: "/admin/ocehan" },
     { label: "Tag", value: tags.count ?? 0, note: "Bisa ditambah kapan aja", icon: TagIcon, href: "/admin/tag" },
   ];
 
   const shortcuts = [
     { label: "Tambah lagu ke playlist", href: "/admin/playlist", icon: MusicIcon },
     { label: "Tambah tag baru", href: "/admin/tag", icon: TagIcon },
-    { label: "Lihat komentar", href: "/admin/komentar", icon: CommentIcon },
+    { label: "Tambah ocehan", href: "/admin/ocehan", icon: QuoteIcon },
   ];
 
   return (

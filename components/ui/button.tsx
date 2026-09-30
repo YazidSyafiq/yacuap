@@ -1,7 +1,7 @@
 import type { ButtonHTMLAttributes } from "react";
 import { cn } from "@/lib/cn";
 
-type Variant = "primary" | "secondary" | "ghost";
+type Variant = "primary" | "secondary" | "ghost" | "danger";
 type Size = "md" | "sm";
 
 /**
@@ -22,6 +22,8 @@ const variants: Record<Variant, string> = {
   primary: "bg-ink text-surface hover:bg-ink-soft",
   secondary: "border border-ink bg-transparent text-ink hover:bg-ink hover:text-surface",
   ghost: "bg-transparent text-muted hover:text-ink",
+  // hanya untuk tindakan yang tidak bisa dibatalkan (hapus), satu-satunya tombol berwarna
+  danger: "bg-danger text-white hover:opacity-90",
 };
 const sizes: Record<Size, string> = {
   md: "h-11 w-[236px] max-w-full px-3 text-sm",

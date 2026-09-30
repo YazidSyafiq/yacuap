@@ -1,5 +1,5 @@
 import type { ComponentType } from "react";
-import { CommentIcon, DashboardIcon, MusicIcon, PenIcon, TagIcon } from "./icons";
+import { DashboardIcon, MusicIcon, PenIcon, QuoteIcon, TagIcon } from "./icons";
 
 export type NavItem = {
   label: string;
@@ -11,7 +11,7 @@ export type NavItem = {
 
 export type NavGroup = { label: string; items: NavItem[] };
 
-/** Menu sidebar admin, berkelompok. */
+/** Menu sidebar admin, berkelompok. Komentar tidak ada: fiturnya dihapus dari rencana. */
 export const NAV: NavGroup[] = [
   { label: "Ringkasan", items: [{ label: "Dashboard", href: "/admin", icon: DashboardIcon, exact: true }] },
   {
@@ -19,10 +19,10 @@ export const NAV: NavGroup[] = [
     items: [
       { label: "Tulisan", href: "/admin/tulisan", icon: PenIcon },
       { label: "Tag", href: "/admin/tag", icon: TagIcon },
-      { label: "Komentar", href: "/admin/komentar", icon: CommentIcon },
     ],
   },
   { label: "Musik", items: [{ label: "Playlist", href: "/admin/playlist", icon: MusicIcon }] },
+  { label: "Absurd", items: [{ label: "Ocehan", href: "/admin/ocehan", icon: QuoteIcon }] },
 ];
 
 const TITLES: Record<string, string> = { "/admin/akun": "Akun Saya" };
