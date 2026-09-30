@@ -2,6 +2,7 @@
 
 import { useActionState } from "react";
 import { Input, Label, Textarea } from "@/components/ui/field";
+import { FormError } from "@/components/ui/form-error";
 import { SubmitButton } from "@/components/ui/submit-button";
 import { createTag, deleteTag, updateTag } from "./actions";
 
@@ -24,9 +25,10 @@ export function NewTagForm() {
           placeholder="Tampil di halaman tagnya. Boleh dikosongin."
         />
       </div>
-      {state?.error || state?.ok ? (
-        <p role="status" className={state.error ? "text-sm font-semibold text-ink" : "text-sm text-muted"}>
-          {state.error ?? state.ok}
+      {state?.error ? <FormError>{state.error}</FormError> : null}
+      {state?.ok ? (
+        <p role="status" className="text-sm text-muted">
+          {state.ok}
         </p>
       ) : null}
       <SubmitButton>Tambah tag</SubmitButton>

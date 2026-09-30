@@ -2,16 +2,20 @@
 
 import { useActionState } from "react";
 import { Input, Label, Textarea } from "@/components/ui/field";
+import { FormError } from "@/components/ui/form-error";
 import { SubmitButton } from "@/components/ui/submit-button";
 import { addTrack, updatePlaylist, type FormState } from "./actions";
 
 function Feedback({ state }: { state: FormState }) {
-  if (!state?.error && !state?.ok) return null;
-  return (
-    <p role="status" className={state.error ? "text-sm font-semibold text-ink" : "text-sm text-muted"}>
-      {state.error ?? state.ok}
-    </p>
-  );
+  if (state?.error) return <FormError>{state.error}</FormError>;
+  if (state?.ok) {
+    return (
+      <p role="status" className="text-sm text-muted">
+        {state.ok}
+      </p>
+    );
+  }
+  return null;
 }
 
 export function PlaylistForm({ playlist }: { playlist: { id: string; name: string; description: string } }) {

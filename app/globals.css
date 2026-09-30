@@ -14,6 +14,8 @@
   --line: #dcdcdc;
   --border-strong: #c9c9c9;
   --cover: #c4c4c4;
+  /* satu-satunya warna di situs: merah untuk pesan galat, supaya tetap jelas */
+  --danger: #c0271c;
 
   /* tinggi header tetap; dipakai hero untuk mengisi sisa layar */
   --header-h: 4rem;
@@ -36,6 +38,7 @@
   --line: #2c2c2c;
   --border-strong: #444444;
   --cover: #3a3a3a;
+  --danger: #ff8a80;
 }
 
 @theme inline {
@@ -47,6 +50,7 @@
   --color-line: var(--line);
   --color-border-strong: var(--border-strong);
   --color-cover: var(--cover);
+  --color-danger: var(--danger);
 
   --font-display: var(--font-fraunces), Georgia, "Times New Roman", serif;
   --font-body: var(--font-newsreader), Georgia, "Times New Roman", serif;
@@ -87,6 +91,20 @@ html::-webkit-scrollbar {
   html {
     scroll-behavior: auto;
   }
+}
+
+/*
+ * Isian yang diisi otomatis oleh browser (email dan kata sandi tersimpan) diberi latar biru atau kuning oleh Chrome.
+ * Latar itu tidak bisa ditimpa langsung, jadi ditutup dengan bayangan dalam sewarna isian.
+ */
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus,
+textarea:-webkit-autofill {
+  -webkit-box-shadow: 0 0 0 1000px var(--surface) inset;
+  -webkit-text-fill-color: var(--ink);
+  caret-color: var(--ink);
+  transition: background-color 9999s ease-out;
 }
 
 ::selection {
