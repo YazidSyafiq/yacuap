@@ -678,8 +678,8 @@ Yang menyusul:
 Jenis konten baru di samping cerita: tulisan sebaris, misalnya "YaAllah pengen 1M".
 
 - Tabel `celotehan` (`body` maksimal 140 karakter, `status`, `created_at`), migration `20260930010000_celotehan.sql`, RLS: publik membaca yang terbit, admin mengelola.
-- Balon di atas kerumunan beranda sekarang berisi celotehan, diambil lewat `lib/celotehan.ts`. Selama tabel kosong atau Supabase belum tersambung, dipakai daftar contoh sementara di file itu.
-- Yang menyusul di Phase 1: form tambah dan hapus celotehan di admin, dan halaman atau bagian khusus yang menampilkan semua celotehan.
+- Balon di atas kerumunan beranda berisi ocehan, diambil lewat `lib/celotehan.ts`. Selama tabel kosong atau Supabase belum tersambung, dipakai seratus ocehan awal milik penulis: sumbernya `docs/ocehan-awal.txt`, disalin ke `lib/ocehan-awal.ts`. Migration `20260930020000_ocehan_awal.sql` memasukkan seratus kalimat itu ke tabel kalau tabelnya masih kosong; sudah dijalankan pada 30 September 2026, tabel berisi 100 baris.
+- Yang menyusul di Phase 1: form tambah dan hapus ocehan di admin.
 - Situs ini tempat menuangkan apa saja dalam tulisan. Tiga kategori tetap ada sebagai rak, tapi copy tidak boleh membatasi isi situs ke tiga topik itu.
 
 ### Gaya bahasa
@@ -703,10 +703,10 @@ Menu di header dan keterangan di bawah wordmark memakai Fraunces, huruf yang sam
 
 ### Menu utama
 
-Menu: "Tulisan", "Ocehan", "Playlist", "Oknumnya". Keempatnya menggulir ke bagian di beranda (`/#tulisan`, `/#ocehan`, `/#playlist`, `/#oknumnya`), bukan membuka halaman lain. Header menempel di atas saat menggulir. Di HP menu tidak ditampilkan: header hanya berisi logo dan tombol tema, dan pengunjung berpindah bagian dengan menggulir atau lewat dua tombol di hero. Halaman `/cerita`, `/celotehan`, `/playlist`, dan `/tentang` tetap ada sebagai tujuan tautan "Lihat semua, dong" di tiap bagian. Musik, Pikiran, dan Absurd tidak lagi di menu; ketiganya jadi rak di halaman `/cerita` dan tetap punya halaman sendiri (`/musik`, `/pikiran`, `/absurd`). Di HP "Tentang" hanya ada di footer supaya menu muat satu baris.
+Menu: "Tulisan", "Playlist", "Ocehan", "Oknumnya", urutannya sama dengan urutan bagian di beranda. Keempatnya menggulir ke bagian di beranda (`/#tulisan`, `/#playlist`, `/#ocehan`, `/#oknumnya`), bukan membuka halaman lain. Header menempel di atas saat menggulir. Di HP menu tidak ditampilkan: header hanya berisi logo dan tombol tema, dan pengunjung berpindah bagian dengan menggulir atau lewat dua tombol di hero. Halaman `/cerita` dan `/playlist` tetap ada sebagai tujuan tautan "Lihat semua, dong"; `/tentang` masih ada tapi tidak ditautkan. Musik, Pikiran, dan Absurd tidak lagi di menu; ketiganya jadi rak di halaman `/cerita` dan tetap punya halaman sendiri (`/musik`, `/pikiran`, `/absurd`). Di HP "Tentang" hanya ada di footer supaya menu muat satu baris.
 
 - `/cerita`: semua tulisan panjang, dengan pilihan rak di atasnya.
-- `/celotehan`: semua tulisan sebaris, sumber yang sama dengan balon di beranda.
+- Ocehan tidak punya halaman sendiri. Semua ocehan tampil langsung di bagian Ocehan di beranda (`/#ocehan`), sumbernya sama dengan balon di hero.
 
 ### Footer
 
@@ -727,3 +727,31 @@ Gambarnya ilustrasi Yazid sendiri (sumber `docs/its me.png`, hitam putih, seteng
 Animasi bagian ini dua saja dan biasa-biasa: gambar beserta balonnya mengambang sangat pelan (7px, 6 detik), dan balon sapaan "Sip, makasih udah mampir!" berulang tiap 7 detik: menyembul, bertahan sekitar 5 detik, mengecil hilang, lalu muncul lagi. Teksnya diam. Keduanya mati kalau pengunjung meminta animasi dikurangi. Pernah dicoba gambar memantul, balon ocehan di sekitar kepala, dan awan pikiran, semuanya dibatalkan karena hasilnya tidak bagus.
 
 Paragraf tentang orangnya masih draf: isinya ditebak dari arah situs (musik, isi kepala, hal absurd), belum dari cerita Yazid sendiri.
+
+### Kepala bagian di beranda
+
+Semua bagian beranda memakai kepala yang seragam, mengikuti bagian Oknumnya: penanda kecil berisi nama bagian (huruf kapital, abu), lalu tulisan besar Fraunces 56px (40px di HP), lalu satu kalimat keterangan.
+
+| Bagian | Penanda | Tulisan besar |
+|---|---|---|
+| Tulisan | TULISAN | Baru kelar nulis, nih. |
+| Playlist | PLAYLIST | Lagi sering muter ini. |
+| Ocehan | OCEHAN | Nggak penting, tapi kepikiran. |
+| Oknumnya | OKNUMNYA | Halo, saya Yazid. |
+
+Keterangan di bagian Ocehan: "Maaf kalo absurd, namanya juga *spontan*." Kata "spontan" dimiringkan, dan di sebelahnya muncul balon jawaban "Uhuyyy" yang berulang (muncul, bertahan, hilang), mengikuti tren panggil-jawab "spontan, uhuyyy". "Uhuyyy" sengaja bukan bagian dari kalimatnya, supaya terasa seperti celetukan orang lain.
+
+### Isi bagian Ocehan
+
+Semua ocehan tampil sebagai teks tanpa kotak yang mengalir rapat di lima jalur zigzag sejajar, selebar layar (`components/site/ocehan-wave.tsx`). Idenya dari komponen bola gambar 3D (21st.dev), tapi tidak membulat: jalurnya zigzag dan isinya teks. Komponennya ditulis sendiri, tanpa pustaka tambahan.
+
+- Jalur zigzag diam di layar dan tidak digambar; pil-pilnya yang bergerak menyusurinya, jadi tiap pil naik turun bergantian. Di laptop sekitar 30 ocehan terlihat sekaligus, di HP sekitar 12.
+- Tiap ocehan teks saja, tanpa kotak atau latar, huruf Fraunces 17px (15px di HP). Tiga gaya huruf bergantian supaya tidak rata: tebal bertinta, miring abu, dan miring bertinta. Disentuh kursor, teksnya bergaris bawah.
+- Hanyut pelan ke kiri sendiri, tiap jalur dengan laju sedikit berbeda. Bisa digeser dengan kursor atau jari, dan meluncur sebentar setelah dilepas.
+- Pil di tengah sedikit lebih besar; yang mendekati tepi mengecil dan memudar. Pil memuat paling banyak dua baris teks di layar lebar dan tiga di HP; sisanya elipsis, lengkapnya di pop up.
+- Pop up otomatis: tiap sekitar enam detik satu ocehan acak tampil membesar di tengah area zigzag selama tiga detik lebih, zigzag di belakangnya kabur, lalu hilang sendiri. Gayanya mengikuti bagian Visi di Portal Parerejo: tanda kutip raksasa yang pudar, label "OCEHAN", isi ocehan besar dan tebal, lalu garis aksen pendek. Pop up hanya menutupi area zigzag, bukan seluruh layar, supaya halaman tetap bisa digulir; hanya jalan saat bagian ini terlihat.
+- Ocehan yang diklik atau diketuk langsung tampil di pop up yang sama dan ditahan enam detik. Sentuhan berikutnya menutupnya.
+- Kalau ocehannya masih sedikit, pil diulang supaya jalurnya penuh.
+- Tanpa JavaScript atau kalau pengunjung meminta animasi dikurangi: daftar teks biasa yang turun baris, tanpa pop up otomatis. Pop up lewat klik tetap jalan.
+
+Pernah dicoba dan dibatalkan: baris teks berjalan dengan ocehan yang "nyala" acak, dan kisi kutipan besar bergaya visi untuk semua ocehan. Gaya visi sekarang hanya dipakai di pop up.

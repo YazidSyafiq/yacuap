@@ -13,8 +13,8 @@ const navLink = "py-2 text-ink hover:text-muted";
  */
 const MENU = [
   { href: "/#tulisan", label: "Tulisan" },
-  { href: "/#ocehan", label: "Ocehan" },
   { href: "/#playlist", label: "Playlist" },
+  { href: "/#ocehan", label: "Ocehan" },
   { href: "/#oknumnya", label: "Oknumnya" },
 ];
 

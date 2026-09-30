@@ -125,6 +125,55 @@ html::-webkit-scrollbar {
 }
 
 /* ---------------------------------------------------------------------------
+ * Ocehan di jalur zigzag (components/site/ocehan-wave.tsx).
+ * Bawaannya daftar pil biasa yang turun baris. Saat komponennya hidup (data-live),
+ * pil jadi melayang dan posisinya diatur JavaScript tiap frame.
+ * ------------------------------------------------------------------------- */
+.ocehan-wave-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  padding: 0 1rem;
+}
+
+.ocehan-wave-repeat {
+  display: none;
+}
+
+.ocehan-pill {
+  width: max-content;
+  max-width: var(--pill-max, 100%);
+}
+
+.ocehan-wave[data-live] {
+  position: relative;
+  /* lapisan sendiri: urutan tumpuk tiap ocehan tidak boleh bocor keluar dan menimpa pop up */
+  isolation: isolate;
+  cursor: grab;
+  /* geser mendatar ditangani sendiri; gulir tegak tetap milik halaman */
+  touch-action: pan-y;
+  user-select: none;
+}
+
+.ocehan-wave[data-live]:active {
+  cursor: grabbing;
+}
+
+.ocehan-wave[data-live] .ocehan-wave-list {
+  display: block;
+  padding: 0;
+}
+
+.ocehan-wave[data-live] li {
+  position: absolute;
+  left: 0;
+  top: 0;
+  display: block;
+  visibility: hidden;
+  will-change: transform;
+}
+
+/* ---------------------------------------------------------------------------
  * Animasi kecil. Hanya aktif kalau pengunjung tidak meminta animasi dikurangi.
  * ------------------------------------------------------------------------- */
 @media (prefers-reduced-motion: no-preference) {
@@ -177,6 +226,22 @@ html::-webkit-scrollbar {
     100% {
       opacity: 0;
       transform: scale(0.5);
+    }
+  }
+
+  /* pop up ocehan: kutipannya membesar dari kecil; latarnya memudar lewat transisi di komponennya */
+  .ocehan-pop {
+    animation: ocehan-pop 340ms cubic-bezier(0.34, 1.4, 0.64, 1) both;
+  }
+
+  @keyframes ocehan-pop {
+    from {
+      opacity: 0;
+      transform: scale(0.72);
+    }
+    to {
+      opacity: 1;
+      transform: none;
     }
   }
 }

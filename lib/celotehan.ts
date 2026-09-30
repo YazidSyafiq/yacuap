@@ -1,29 +1,18 @@
 import "server-only";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
+import { OCEHAN_AWAL } from "@/lib/ocehan-awal";
 import { createPublicClient } from "@/lib/supabase/public";
 
 /**
- * Celotehan: tulisan sebaris, pendamping cerita yang panjang. Muncul di balon kerumunan di beranda.
+ * Ocehan: tulisan sebaris, pendamping cerita yang panjang.
+ * Tampil di bagian Ocehan di beranda dan di balon kerumunan hero.
  *
- * CONTOH dipakai selama tabel `celotehan` belum ada isinya (atau Supabase belum disambungkan).
- * Ini hanya pengisi sementara, bukan kata-kata asli penulis, kecuali yang pertama.
+ * Sumbernya tabel `celotehan`. Selama tabel itu kosong (atau Supabase belum tersambung),
+ * dipakai OCEHAN_AWAL: seratus kalimat milik penulis dari docs/ocehan-awal.txt.
  */
-const CONTOH = [
-  "YaAllah pengen 1M",
-  "niatnya cuma lima menit",
-  "kok udah Senin lagi",
-  "laper tapi males",
-  "besok aja deh",
-  "lagu ini lagi, lagu ini lagi",
-  "ngantuk tapi belum mau tidur",
-  "kopi dulu baru mikir",
-  "ya gitu deh",
-  "tadi mau ngapain ya",
-];
-
-/** Celotehan terbaru untuk balon di beranda. Tidak pernah melempar galat: kalau gagal, pakai contoh. */
+/** Semua ocehan, terbaru dulu. Tidak pernah melempar galat: kalau gagal atau kosong, pakai ocehan awal. */
 export async function getCelotehan(limit = 40): Promise<string[]> {
-  if (!isSupabaseConfigured()) return CONTOH;
+  if (!isSupabaseConfigured()) return [...OCEHAN_AWAL];
   try {
     const { data, error } = await createPublicClient()
       .from("celotehan")
@@ -31,9 +20,9 @@ export async function getCelotehan(limit = 40): Promise<string[]> {
       .eq("status", "published")
       .order("created_at", { ascending: false })
       .limit(limit);
-    if (error || !data || data.length === 0) return CONTOH;
+    if (error || !data || data.length === 0) return [...OCEHAN_AWAL];
     return data.map((row) => String(row.body));
   } catch {
-    return CONTOH;
+    return [...OCEHAN_AWAL];
   }
 }
