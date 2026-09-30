@@ -44,7 +44,7 @@ export default async function LoginPage({ searchParams }: PageProps<"/admin/logi
           <p className="relative mt-6 font-ui text-xs text-bg/70">Area khusus {site.author}</p>
         </div>
 
-        <div className="flex flex-col justify-center gap-5 p-7 sm:p-8">
+        <div className="flex flex-col justify-center gap-5 p-5 sm:p-8">
           <div className="md:hidden">
             <Logo height={36} />
           </div>

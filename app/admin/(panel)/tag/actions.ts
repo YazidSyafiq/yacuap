@@ -58,14 +58,18 @@ export async function createTag(_prev: FormState, formData: FormData): Promise<F
 }
 
 /** Nama dan keterangan bisa diubah; alamatnya (slug) tetap supaya tautan lama tidak putus. */
-export async function updateTag(formData: FormData) {
+export async function updateTag(_prev: FormState, formData: FormData): Promise<FormState> {
   const { supabase } = await requireAdmin();
   const id = text(formData, "id");
   const name = text(formData, "name");
-  if (!id || !name) return;
+  if (!id) return { error: "Tagnya tidak ditemukan." };
+  if (!name) return { error: "Nama tagnya diisi dulu." };
 
-  await supabase.from("tags").update({ name, description: text(formData, "description") }).eq("id", id);
+  const { error } = await supabase.from("tags").update({ name, description: text(formData, "description") }).eq("id", id);
+  if (error) return { error: error.code === "23505" ? "Tag dengan nama itu sudah ada." : "Gagal menyimpan. Coba lagi." };
+
   refresh();
+  return { ok: "Tersimpan." };
 }
 
 /** Menghapus tag hanya melepasnya dari tulisan; tulisannya sendiri tidak ikut terhapus. */

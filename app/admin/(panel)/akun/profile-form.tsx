@@ -224,7 +224,7 @@ export function ProfileForm({ profile }: { profile: ProfileValues }) {
             {state.ok}
           </p>
         ) : null}
-        <SubmitButton>Simpan perubahan</SubmitButton>
+        <SubmitButton block="sm">Simpan perubahan</SubmitButton>
       </div>
     </form>
   );

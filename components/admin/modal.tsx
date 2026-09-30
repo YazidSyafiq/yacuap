@@ -59,11 +59,12 @@ export function Modal({
         if (event.target === event.currentTarget) onClose();
       }}
       className={cn(
-        "m-auto w-[calc(100%-2rem)] max-w-md rounded-2xl border border-line bg-surface p-0 text-ink shadow-2xl backdrop:bg-ink/30 backdrop:backdrop-blur-[2px] dark:border-border-strong dark:shadow-[0_0_60px_-10px_rgba(255,255,255,0.2)]",
+        // tinggi dibatasi setinggi layar dan isinya bisa digulir, untuk HP pendek dan saat keyboard terbuka
+        "m-auto max-h-[calc(100svh-2rem)] w-[calc(100%-2rem)] max-w-md overflow-y-auto rounded-2xl border border-line bg-surface p-0 text-ink shadow-2xl backdrop:bg-ink/30 backdrop:backdrop-blur-[2px] dark:border-border-strong dark:shadow-[0_0_60px_-10px_rgba(255,255,255,0.2)]",
         className,
       )}
     >
-      <div className="flex flex-col gap-1 border-b border-line px-6 py-5">
+      <div className="flex flex-col gap-1 border-b border-line px-5 py-4 sm:px-6 sm:py-5">
         <div className="flex items-center gap-3">
           {Icon ? (
             <span
@@ -87,9 +88,9 @@ export function Modal({
         </div>
         {note ? <p className={cn("text-sm text-muted", Icon && "pl-12")}>{note}</p> : null}
       </div>
-      <div className="px-6 py-5">{children}</div>
+      <div className="px-5 py-4 sm:px-6 sm:py-5">{children}</div>
       {footer ? (
-        <div className="flex flex-col-reverse gap-2 rounded-b-2xl border-t border-line bg-bg/60 px-6 py-4 sm:flex-row sm:justify-end">
+        <div className="flex flex-col-reverse gap-2 rounded-b-2xl border-t border-line bg-bg/60 px-5 py-4 sm:flex-row sm:justify-end sm:px-6">
           {footer}
         </div>
       ) : null}

@@ -29,10 +29,10 @@ const iconButton = "flex size-8 items-center justify-center rounded-lg text-mute
 function ModalActions({ onClose, submit, danger = false }: { onClose: () => void; submit: string; danger?: boolean }) {
   return (
     <div className="flex flex-col-reverse gap-2 pt-1 sm:flex-row sm:justify-end">
-      <Button variant="secondary" size="sm" onClick={onClose}>
+      <Button variant="secondary" size="sm" block="sm" onClick={onClose}>
         Batal
       </Button>
-      <SubmitButton size="sm" variant={danger ? "danger" : "primary"}>
+      <SubmitButton size="sm" block="sm" variant={danger ? "danger" : "primary"}>
         {submit}
       </SubmitButton>
     </div>
@@ -239,10 +239,10 @@ function NoteModal({ track, onClose, onEdit }: { track: Track; onClose: () => vo
           {track.note}
         </blockquote>
         <div className="flex flex-col-reverse gap-2 pt-1 sm:flex-row sm:justify-end">
-          <Button variant="secondary" size="sm" onClick={onClose}>
+          <Button variant="secondary" size="sm" block="sm" onClick={onClose}>
             Tutup
           </Button>
-          <Button size="sm" onClick={onEdit}>
+          <Button size="sm" block="sm" onClick={onEdit}>
             Ubah Catatan
           </Button>
         </div>
@@ -282,7 +282,7 @@ export function PlaylistManager({ playlist, tracks }: { playlist: PlaylistInfo; 
       <AdminPageHeader
         title="Playlist"
         note="Satu playlist, isinya diatur dari sini. Urutan di daftar adalah urutan di situs."
-        action={<Button onClick={() => setModal({ kind: "add" })}>Tambah Lagu</Button>}
+        action={<Button block="sm" onClick={() => setModal({ kind: "add" })}>Tambah Lagu</Button>}
       />
 
       <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-[300px_minmax(0,1fr)]">

@@ -255,7 +255,7 @@ export function AdminShell({
         </div>
       ) : null}
 
-      <div className="flex min-w-0 flex-1 flex-col">
+      <div className="flex min-w-0 flex-1 flex-col overflow-x-hidden">
         <header className="sticky top-0 z-30 border-b border-line bg-bg/85 backdrop-blur-md">
           <div className="flex h-14 items-center gap-3 px-4 md:px-6">
             <button

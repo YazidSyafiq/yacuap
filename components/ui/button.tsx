@@ -10,6 +10,8 @@ type Size = "md" | "sm";
  * - `md` (bawaan, tombol utama halaman): 236 x 44 px.
  * - `sm` (tombol kecil di dalam kartu atau baris data): 160 x 40 px.
  * - `block` (tombol di dalam formulir): selebar formulirnya, tinggi tetap mengikuti ukurannya.
+ * - `block="sm"`: selebar wadahnya hanya di layar sempit (HP), ukuran tetap mulai layar sm. Untuk tombol di
+ *   kepala halaman dan kaki pop up, supaya di HP tidak menggantung di kiri dengan lebar setengah layar.
  *
  * Lebar TIDAK mengikuti panjang tulisan. Jadi tombol-tombol yang berdampingan selalu sama besar,
  * dan tulisan tombol harus muat: paling panjang sekitar 28 karakter untuk `md`, 17 untuk `sm`.
@@ -33,12 +35,18 @@ const blockSizes: Record<Size, string> = {
   md: "h-11 w-full px-4 text-sm",
   sm: "h-10 w-full px-3 text-[13px]",
 };
+const mobileBlockSizes: Record<Size, string> = {
+  md: "h-11 w-full px-4 text-sm sm:w-[236px] sm:max-w-full sm:px-3",
+  sm: "h-10 w-full px-3 text-[13px] sm:w-40 sm:max-w-full",
+};
 
-type Options = { variant?: Variant; size?: Size; block?: boolean };
+type Block = boolean | "sm";
+type Options = { variant?: Variant; size?: Size; block?: Block };
 
 /** Kelas tombol untuk elemen selain <button>, misalnya <Link>. */
-export function buttonClass(variant: Variant = "primary", size: Size = "md", className?: string, block = false) {
-  return cn(base, variants[variant], block ? blockSizes[size] : sizes[size], className);
+export function buttonClass(variant: Variant = "primary", size: Size = "md", className?: string, block: Block = false) {
+  const sizeClass = block === "sm" ? mobileBlockSizes[size] : block ? blockSizes[size] : sizes[size];
+  return cn(base, variants[variant], sizeClass, className);
 }
 
 export function Button({

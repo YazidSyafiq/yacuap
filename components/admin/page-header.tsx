@@ -16,7 +16,8 @@ export function AdminPageHeader({
         </h1>
         {note ? <p className="max-w-2xl font-ui text-[15px] text-muted">{note}</p> : null}
       </div>
-      {action ? <div className="flex shrink-0 items-center gap-2">{action}</div> : null}
+      {/* di HP aksinya turun ke bawah judul; tombol di dalamnya sebaiknya memakai block="sm" */}
+      {action ? <div className="flex shrink-0 flex-col items-stretch gap-2 sm:flex-row sm:items-center">{action}</div> : null}
     </div>
   );
 }

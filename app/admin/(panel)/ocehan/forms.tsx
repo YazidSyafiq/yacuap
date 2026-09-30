@@ -53,10 +53,12 @@ function QuipModal({ quip, open, onClose }: { quip: Quip | null; open: boolean; 
         </div>
         {state?.error ? <FormError>{state.error}</FormError> : null}
         <div className="flex flex-col-reverse gap-2 pt-1 sm:flex-row sm:justify-end">
-          <Button variant="secondary" size="sm" onClick={onClose}>
+          <Button variant="secondary" size="sm" block="sm" onClick={onClose}>
             Batal
           </Button>
-          <SubmitButton size="sm">{editing ? "Simpan" : "Tambah"}</SubmitButton>
+          <SubmitButton size="sm" block="sm">
+            {editing ? "Simpan" : "Tambah"}
+          </SubmitButton>
         </div>
       </form>
     </Modal>
@@ -73,10 +75,10 @@ function DeleteModal({ quip, onClose }: { quip: Quip; onClose: () => void }) {
           {quip.body}
         </blockquote>
         <div className="flex flex-col-reverse gap-2 pt-1 sm:flex-row sm:justify-end">
-          <Button variant="secondary" size="sm" onClick={onClose}>
+          <Button variant="secondary" size="sm" block="sm" onClick={onClose}>
             Batal
           </Button>
-          <SubmitButton variant="danger" size="sm">
+          <SubmitButton variant="danger" size="sm" block="sm">
             Hapus
           </SubmitButton>
         </div>
@@ -145,7 +147,7 @@ export function OcehanManager({ quips, dates }: { quips: Quip[]; dates: Record<s
       <AdminPageHeader
         title="Ocehan"
         note={`${quips.length} kalimat sebaris yang nggak penting tapi kepikiran. Tampil di bagian Ocehan dan di balon-balon kerumunan beranda.`}
-        action={<Button onClick={() => setModal({ quip: null })}>Tambah Ocehan</Button>}
+        action={<Button block="sm" onClick={() => setModal({ quip: null })}>Tambah Ocehan</Button>}
       />
 
       <div className="relative w-full">
