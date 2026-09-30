@@ -834,3 +834,9 @@ Fitur komentar dibatalkan seluruhnya (1 Oktober 2026): tidak ada halaman admin k
 ### Admin di HP
 
 Diperiksa untuk HP Vivo V23 5G milik penulis (lebar layar 360px) dan HP yang lebih sempit (320px). Aturannya: tombol di kepala halaman dan di kaki pop up memakai `block="sm"` (selebar wadahnya di HP, ukuran seragam mulai layar sm); kolom-kolom bertumpuk satu; tombol-tombol ikon di baris daftar turun ke baris sendiri; area isi admin tidak boleh meluber ke samping (`overflow-x-hidden`); jarak dalam pop up dan kartu masuk lebih rapat di HP.
+
+### Tampilan saat memuat
+
+- Tiap halaman punya kerangka pemuatan sendiri (`loading.tsx` di foldernya) yang mengikuti susunan halaman itu, berupa kotak-kotak abu yang berkedip pelan (`components/ui/skeleton.tsx`): Dashboard, Tulisan, Tag, Playlist, Ocehan, dan Akun Saya di admin; `/tulisan`, halaman tag, `/playlist`, dan halaman baca di publik. Tampil seketika saat berpindah halaman, lalu diganti isinya begitu siap. Diam kalau pengunjung meminta animasi dikurangi.
+- Tombol kirim formulir menampilkan lingkaran berputar selama diproses.
+- Gambar dimuat malas (lazy) lewat next/image, kecuali cover di halaman baca yang diprioritaskan.

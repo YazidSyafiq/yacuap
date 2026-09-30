@@ -445,3 +445,20 @@ textarea:-webkit-autofill {
   font-size: 0.8125rem;
   color: var(--muted);
 }
+
+/* Kerangka isi yang sedang dimuat: berkedip pelan. Diam kalau pengunjung meminta animasi dikurangi. */
+@media (prefers-reduced-motion: no-preference) {
+  .skeleton {
+    animation: skeleton 1.6s ease-in-out infinite;
+  }
+
+  @keyframes skeleton {
+    0%,
+    100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.45;
+    }
+  }
+}
