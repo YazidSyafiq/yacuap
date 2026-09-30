@@ -1,51 +1,50 @@
 "use client";
 
-import { gsap } from "gsap";
 import { useEffect, useRef } from "react";
 import { cn } from "@/lib/cn";
 
 /**
  * Kerumunan orang seluruh badan yang berjalan melintas, digambar di canvas.
  *
- * Diadaptasi dari Skiper UI "Skiper 39" (@gurvinder-singh02, https://gxuri.me), yang sendirinya
- * diadaptasi dari pen Szenia Zadvornykh (https://codepen.io/zadvorsky/pen/xxwbBQV).
- * Ilustrasi: Open Peeps karya Pablo Stanley (https://www.openpeeps.com/), CC0.
- * Versi gratis Skiper UI mewajibkan atribusi; kreditnya ada di halaman /tentang.
+ * Ditulis sendiri untuk Yacuap, tanpa pustaka animasi: satu simulasi kecil yang dijalankan tiap frame
+ * (requestAnimationFrame). Tiap orang punya posisi, arah, kecepatan, dan irama langkah; posisinya dimajukan
+ * sesuai waktu yang berlalu, dan orang yang keluar layar masuk lagi dari tepi sebagai sosok lain.
  *
- * Bedanya dengan aslinya:
- * - sosoknya seluruh badan dan menapak di tanah (sprite dari scripts/buat-sprite-kerumunan.cjs);
- *   tiap sel sprite sudah rata bawah, jadi dasar sel = telapak kaki,
- * - langkah: badan naik turun dan sedikit oleng kiri kanan seirama, kecepatan mengikuti tinggi badan,
+ * Ilustrasi: Open Peeps karya Pablo Stanley (https://www.openpeeps.com/), lisensi CC0.
+ * Sprite dibuat oleh scripts/buat-sprite-kerumunan.cjs; tiap sel sudah rata bawah, jadi dasar sel = telapak kaki.
+ *
+ * Yang dikerjakan komponen ini:
  * - ukuran orang, balon, dan logo mengikuti lebar layar: besar di monitor, kecil di HP,
- * - balon ucapan di atas sebagian orang,
+ * - langkah: badan naik turun dan sedikit oleng kiri kanan seirama, kecepatan mengikuti tinggi badan,
+ * - balon ucapan berbaris di jalur tetap di atas kerumunan,
  * - satu "tuan rumah" yang diam di depan kerumunan dengan balon logo,
  * - berhenti saat tidak terlihat, dan menghormati prefers-reduced-motion,
  * - ikut mode gelap: sprite sendiri (garis tepi terang) dan balon terang, bukan warna yang dibalik.
  */
 
-type Rect = [x: number, y: number, width: number, height: number];
+/** Potongan sprite: x, y, lebar, tinggi di gambar sumber. */
+type Cell = readonly [sx: number, sy: number, sw: number, sh: number];
 
-type Peep = {
-  rect: Rect;
-  width: number;
-  height: number;
+type Walker = {
+  cell: Cell;
   /** Titik tengah badan, sumbu x. */
   x: number;
   /** Garis tanah tempat kakinya menapak. */
   ground: number;
-  /** Angkatan badan saat melangkah (px, ke atas). */
-  lift: number;
-  /** Olengan badan saat melangkah (radian). */
-  rock: number;
-  scaleX: 1 | -1;
-  bubble: string | null;
-  /** Lebar balon dalam px, diukur sekali saat balon diberikan. */
-  bubbleWidth: number;
-  /** Transparansi balon saat ini, 0 sampai 1. Berubah halus, tidak pernah muncul atau hilang mendadak. */
-  bubbleAlpha: number;
-  /** Urutan kedatangan: yang lebih dulu datang menang kalau dua balon berebut tempat. */
+  direction: 1 | -1;
+  /** Piksel per detik. */
+  speed: number;
+  /** Jumlah langkah yang sudah diambil; bagian pecahannya menentukan posisi badan dalam satu langkah. */
+  steps: number;
+  /** Langkah per detik. */
+  cadence: number;
+  /** Isi balon, atau null kalau tidak sedang ngomong. */
+  text: string | null;
+  textWidth: number;
+  /** Transparansi balon saat ini, 0 sampai 1. Berubah halus. */
+  alpha: number;
+  /** Urutan masuk: yang lebih dulu masuk menang kalau dua balon berebut tempat. */
   order: number;
-  walk: gsap.core.Timeline | null;
 };
 
 export type CrowdHost = {
@@ -74,7 +73,7 @@ type CrowdCanvasProps = {
   maxPhraseLength?: number;
   /** Peluang seseorang membawa balon, 0 sampai 1. */
   bubbleChance?: number;
-  /** Pengali keramaian. 1 = seramai versi aslinya, 0.5 = separuhnya. */
+  /** Pengali keramaian. 1 = bawaan, 0.5 = separuhnya. */
   density?: number;
   /**
    * Ukuran orang mengikuti lebar layar: tinggi = sizeBase + lebar x sizeByWidth,
@@ -86,15 +85,25 @@ type CrowdCanvasProps = {
   sizeByWidth?: number;
   minPeepHeight?: number;
   maxPeepHeight?: number;
-  /** Orang tidak pernah lebih tinggi dari bagian ini dari tinggi canvas, supaya balon tetap muat di atas kepala. */
+  /** Orang tidak pernah lebih tinggi dari bagian ini dari tinggi canvas. */
   maxHeightFraction?: number;
   /** Tuan rumah: satu sosok yang diam di depan. */
   host?: CrowdHost;
   className?: string;
 };
 
-const randomRange = (min: number, max: number) => min + Math.random() * (max - min);
-const randomIndex = (length: number) => Math.floor(Math.random() * length);
+const between = (min: number, max: number) => min + Math.random() * (max - min);
+const pickIndex = (length: number) => Math.floor(Math.random() * length);
+const clamp = (value: number, min: number, max: number) => Math.max(min, Math.min(max, value));
+
+/** Laju jalan: bagian tinggi badan yang ditempuh per detik. */
+const WALK_SPEED = 0.55;
+/** Panjang satu langkah, sebagai bagian dari tinggi badan. */
+const STRIDE = 0.25;
+/** Badan terangkat paling banyak sebesar ini (bagian tinggi badan) di tengah langkah. */
+const LIFT = 0.022;
+/** Olengan badan paling besar, dalam radian. */
+const LEAN = 0.03;
 
 export function CrowdCanvas({
   src,
@@ -124,196 +133,220 @@ export function CrowdCanvas({
     const ctx = canvas?.getContext("2d");
     if (!canvas || !ctx) return;
 
-    // Tema mengikuti atribut data-theme di <html>. Mode gelap memakai sprite sendiri (orang dengan garis tepi
-    // terang) dan balon terang bertulisan gelap. Warna tidak dibalik mentah, supaya orangnya tetap wajar.
     const root = document.documentElement;
-    const isDark = () => root.getAttribute("data-theme") === "dark";
-    const palette = () =>
-      isDark() ? { ink: "#ededed", paper: "#121212" } : { ink: "#111111", paper: "#ffffff" };
-    let { ink, paper } = palette();
-    const fontFamily = getComputedStyle(canvas).fontFamily || "sans-serif";
     const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const fontFamily = getComputedStyle(canvas).fontFamily || "sans-serif";
 
-    const lightImg = new Image();
-    let darkImg: HTMLImageElement | null = null;
+    // ---------------------------------------------------------------- tema
+    const isDark = () => root.getAttribute("data-theme") === "dark";
+    const colors = { ink: "#111111", paper: "#ffffff" };
+    const sheets: { light: HTMLImageElement; dark: HTMLImageElement | null } = { light: new Image(), dark: null };
+    const marks: { light: HTMLImageElement | null; dark: HTMLImageElement | null } = {
+      light: hostBubbleImage ? new Image() : null,
+      dark: null,
+    };
+    const ready = (image: HTMLImageElement | null): image is HTMLImageElement =>
+      Boolean(image && image.complete && image.naturalWidth > 0);
     // gambar yang sedang dipakai; berganti saat tema berganti
-    let img = lightImg;
-    const lightMark = hostBubbleImage ? new Image() : null;
-    let darkMark: HTMLImageElement | null = null;
-    let bubbleImg = lightMark;
-    // peepHeight: tinggi sel di layar. depth: rentang garis tanah dari baris depan ke belakang.
-    // bubble*: ukuran huruf, tinggi balon, jumlah jalur, dan posisi atas tiap jalur.
-    const stage = {
-      width: 0,
-      height: 0,
-      dpr: 1,
+    let sheet = sheets.light;
+    let mark = marks.light;
+
+    // ---------------------------------------------------------------- keadaan
+    const view = { width: 0, height: 0, dpr: 1 };
+    // Ukuran dan garis-garis panggung, dihitung ulang tiap kali canvas berubah ukuran.
+    const scene = {
       peepHeight: 0,
-      scale: 1,
+      cellScale: 1,
       floor: 0,
       depth: 0,
-      bubbleFont: 12,
+      font: 12,
       bubbleHeight: 24,
-      bubbleLanes: [] as number[],
+      lanes: [] as number[],
     };
+    const cells: Cell[] = [];
+    let hostCell: Cell | null = null;
+    const walkers: Walker[] = [];
+    const hostBox = { x: 0, ground: 0, width: 0, height: 0 };
     let arrivals = 0;
-    // sel sprite untuk pejalan (tanpa tuan rumah); satu sel boleh dipakai beberapa orang sekaligus
-    const cells: Rect[] = [];
-    const walkers: Peep[] = [];
-    const available: Peep[] = [];
-    const crowd: Peep[] = [];
-    let hostPeep: Peep | null = null;
-    let hostIdle: gsap.core.Tween | null = null;
-    let running = false;
+    let clock = 0;
+    let frameId = 0;
+    let lastTime = 0;
+    let playing = false;
     let disposed = false;
 
-    const createPeep = (rect: Rect): Peep => ({
-      rect,
-      width: rect[2],
-      height: rect[3],
-      x: 0,
-      ground: 0,
-      lift: 0,
-      rock: 0,
-      scaleX: 1,
-      bubble: null,
-      bubbleWidth: 0,
-      bubbleAlpha: 0,
-      order: 0,
-      walk: null,
-    });
+    const fontCss = () => `600 ${scene.font}px ${fontFamily}`;
 
-    const readSprite = () => {
-      const rectWidth = img.naturalWidth / perRow;
-      const rectHeight = img.naturalHeight / rowCount;
+    // ---------------------------------------------------------------- sprite
+    const sliceSheet = () => {
+      const width = sheets.light.naturalWidth / perRow;
+      const height = sheets.light.naturalHeight / rowCount;
       for (let i = 0; i < perRow * rowCount; i++) {
-        const rect: Rect = [(i % perRow) * rectWidth, Math.floor(i / perRow) * rectHeight, rectWidth, rectHeight];
+        const cell: Cell = [(i % perRow) * width, Math.floor(i / perRow) * height, width, height];
         // tuan rumah tidak ikut berjalan, supaya tidak ada kembarannya di kerumunan
-        if (i === hostIndex) hostPeep = createPeep(rect);
-        else cells.push(rect);
+        if (i === hostIndex) hostCell = cell;
+        else cells.push(cell);
       }
     };
 
-    /** Siapkan cukup pejalan untuk keramaian yang diminta, sel sprite dipakai bergiliran secara acak. */
-    const fillWalkers = (count: number) => {
-      walkers.length = 0;
-      const order = cells.map((_, i) => i).sort(() => Math.random() - 0.5);
-      // cadangan supaya yang masuk berikutnya tidak selalu orang yang baru saja keluar
-      const total = count + Math.max(12, Math.round(count * 0.2));
-      for (let i = 0; i < total; i++) walkers.push(createPeep(cells[order[i % order.length]]));
-    };
-
-    const bubbleFontCss = () => `600 ${stage.bubbleFont}px ${fontFamily}`;
-
-    const resetPeep = (peep: Peep) => {
-      const direction = Math.random() > 0.5 ? 1 : -1;
-      peep.width = peep.rect[2] * stage.scale;
-      peep.height = peep.rect[3] * stage.scale;
+    // ---------------------------------------------------------------- orang
+    /** Isi ulang seorang pejalan dengan sosok, arah, kecepatan, dan balon yang baru. */
+    const cast = (walker: Walker, atEdge: boolean) => {
+      const pace = between(0.75, 1.3);
+      const half = (walker.cell[2] * scene.cellScale) / 2;
+      walker.cell = cells[pickIndex(cells.length)];
+      walker.direction = Math.random() < 0.5 ? 1 : -1;
+      walker.speed = scene.peepHeight * WALK_SPEED * pace;
+      walker.cadence = (WALK_SPEED * pace) / STRIDE;
+      walker.steps = Math.random() * 2;
       // tersebar dari baris depan sampai belakang, sedikit lebih ramai di depan
-      peep.ground = stage.floor - stage.depth * Math.pow(Math.random(), 1.25);
-      peep.scaleX = direction;
-      peep.x = direction === 1 ? -peep.width : stage.width + peep.width;
-      peep.lift = 0;
-      peep.rock = 0;
-      const phrase =
-        phrases.length > 0 && Math.random() < bubbleChance ? phrases[randomIndex(phrases.length)] : null;
-      peep.bubble =
+      walker.ground = scene.floor - scene.depth * Math.pow(Math.random(), 1.25);
+      walker.x = atEdge
+        ? walker.direction === 1
+          ? -half - between(0, half * 3)
+          : view.width + half + between(0, half * 3)
+        : between(-half, view.width + half);
+      walker.order = arrivals++;
+      walker.alpha = 0;
+
+      const phrase = phrases.length > 0 && Math.random() < bubbleChance ? phrases[pickIndex(phrases.length)] : null;
+      walker.text =
         phrase && phrase.length > maxPhraseLength ? `${phrase.slice(0, maxPhraseLength - 1).trimEnd()}…` : phrase;
-      peep.bubbleAlpha = 0;
-      peep.order = arrivals++;
-      if (peep.bubble) {
-        ctx.font = bubbleFontCss();
-        peep.bubbleWidth = Math.ceil(ctx.measureText(peep.bubble).width + stage.bubbleFont * 2);
-      }
-      return direction === 1 ? stage.width + peep.width : -peep.width;
-    };
-
-    const walk = (peep: Peep, endX: number) => {
-      // kecepatan jalan kira-kira 0,55 tinggi badan per detik
-      const distance = Math.abs(endX - peep.x);
-      const duration = distance / (stage.peepHeight * 0.55);
-      const step = 0.46; // detik per langkah
-      const steps = Math.max(2, Math.round(duration / step));
-      const tl = gsap.timeline({ paused: !running });
-      tl.timeScale(randomRange(0.75, 1.3));
-      tl.to(peep, { duration, x: endX, ease: "none" }, 0);
-      // tiap langkah: badan terangkat lalu turun
-      tl.to(
-        peep,
-        { duration: step / 2, lift: stage.peepHeight * 0.022, ease: "sine.out", yoyo: true, repeat: steps * 2 - 1 },
-        0,
-      );
-      // tiap langkah: badan oleng ke sisi kaki yang menapak
-      const lean = 0.03;
-      tl.fromTo(
-        peep,
-        { rock: -lean },
-        { duration: step, rock: lean, ease: "sine.inOut", yoyo: true, repeat: steps - 1 },
-        0,
-      );
-      return tl;
-    };
-
-    const addPeepToCrowd = () => {
-      const peep = available.splice(randomIndex(available.length), 1)[0];
-      peep.walk = walk(peep, resetPeep(peep)).eventCallback("onComplete", () => {
-        crowd.splice(crowd.indexOf(peep), 1);
-        available.push(peep);
-        addPeepToCrowd();
-      });
-      crowd.push(peep);
-      // yang garis tanahnya lebih bawah ada di depan
-      crowd.sort((a, b) => a.ground - b.ground);
-      return peep;
-    };
-
-    const placeHost = () => {
-      hostIdle?.kill();
-      hostIdle = null;
-      if (!hostPeep) return;
-      const peep: Peep = hostPeep;
-      const scale = stage.scale * 1.12;
-      peep.width = peep.rect[2] * scale;
-      peep.height = peep.rect[3] * scale;
-      peep.scaleX = 1;
-      peep.rock = 0;
-      peep.lift = 0;
-      peep.x = stage.width * (stage.width < 640 ? 0.5 : hostPosition);
-      // berdiri sedikit di depan baris terdepan
-      peep.ground = stage.floor + (stage.height - stage.floor) * 0.45;
-      if (!reduceMotion) {
-        hostIdle = gsap.to(peep, {
-          lift: peep.height * 0.012,
-          duration: 1.4,
-          ease: "sine.inOut",
-          yoyo: true,
-          repeat: -1,
-          paused: !running,
-        });
+      if (walker.text) {
+        ctx.font = fontCss();
+        walker.textWidth = Math.ceil(ctx.measureText(walker.text).width + scene.font * 2);
       }
     };
 
-    const headTop = (peep: Peep) => peep.ground - peep.lift - peep.height;
+    const populate = (count: number) => {
+      walkers.length = 0;
+      for (let i = 0; i < count; i++) {
+        const walker: Walker = {
+          cell: cells[0],
+          x: 0,
+          ground: 0,
+          direction: 1,
+          speed: 0,
+          steps: 0,
+          cadence: 0,
+          text: null,
+          textWidth: 0,
+          alpha: 0,
+          order: 0,
+        };
+        cast(walker, false);
+        walkers.push(walker);
+      }
+      sortByDepth();
+    };
 
+    /** Yang garis tanahnya lebih bawah ada di depan, jadi digambar belakangan. */
+    const sortByDepth = () => walkers.sort((a, b) => a.ground - b.ground);
+
+    const advance = (dt: number) => {
+      clock += dt;
+      let recast = false;
+      for (const walker of walkers) {
+        walker.x += walker.direction * walker.speed * dt;
+        walker.steps += walker.cadence * dt;
+        const half = (walker.cell[2] * scene.cellScale) / 2;
+        const gone = walker.direction === 1 ? walker.x - half > view.width : walker.x + half < 0;
+        if (gone) {
+          cast(walker, true);
+          recast = true;
+        }
+      }
+      if (recast) sortByDepth();
+    };
+
+    /** Badan terangkat sekali tiap langkah. */
+    const liftOf = (walker: Walker) => Math.sin(Math.PI * (walker.steps % 1)) * scene.peepHeight * LIFT;
+    /** Badan oleng ke kiri pada satu langkah, ke kanan pada langkah berikutnya. */
+    const leanOf = (walker: Walker) => Math.sin(Math.PI * walker.steps) * LEAN;
+
+    // ---------------------------------------------------------------- tata letak
+    const measure = () => {
+      view.width = canvas.clientWidth;
+      view.height = canvas.clientHeight;
+      if (view.width === 0 || view.height === 0 || !ready(sheets.light)) return false;
+      view.dpr = Math.min(window.devicePixelRatio || 1, 2);
+      canvas.width = Math.round(view.width * view.dpr);
+      canvas.height = Math.round(view.height * view.dpr);
+
+      // besar di layar besar, kecil di HP; tidak pernah melebihi jatah tinggi canvas
+      const wanted = clamp(sizeBase + view.width * sizeByWidth, minPeepHeight, maxPeepHeight);
+      let peepHeight = Math.min(wanted, view.height * maxHeightFraction);
+
+      // Ruang untuk jalur balon di atas kerumunan. Dua jalur kalau muat tanpa banyak mengecilkan orang,
+      // kalau tidak, satu jalur saja. Tanpa kalimat, tidak perlu ruang.
+      const minDepth = 0.14; // baris belakang paling sedikit naik 14% tinggi badan
+      const room = (laneCount: number) => {
+        const font = clamp(peepHeight * 0.05, 11, 20);
+        const bubble = Math.round(font * 2);
+        // jarak kepala ke jalur terbawah + jalur-jalurnya + angkatan langkah + ruang napas di tepi atas
+        const reserve =
+          laneCount === 0
+            ? 12
+            : laneCount * bubble + (laneCount - 1) * font * 0.5 + font * 1.1 + peepHeight * 0.03 + font * 1.6;
+        const bottomPad = Math.max(10, peepHeight * 0.05);
+        return { font, bubble, reserve, bottomPad, tallest: (view.height - bottomPad - reserve) / (1 + minDepth) };
+      };
+      let laneCount = phrases.length > 0 ? 2 : 0;
+      let fit = room(laneCount);
+      if (laneCount === 2 && fit.tallest < peepHeight * 0.94) {
+        laneCount = 1;
+        fit = room(laneCount);
+      }
+      if (fit.tallest < peepHeight) {
+        peepHeight = Math.max(60, fit.tallest);
+        fit = room(laneCount);
+      }
+
+      scene.peepHeight = peepHeight;
+      scene.cellScale = peepHeight / (sheets.light.naturalHeight / rowCount);
+      scene.floor = view.height - fit.bottomPad;
+      scene.depth = clamp(view.height - peepHeight - fit.bottomPad - fit.reserve, 0, peepHeight * 0.5);
+      scene.font = fit.font;
+      scene.bubbleHeight = fit.bubble;
+      // jalur 0 tepat di atas kepala baris paling belakang, jalur 1 di atasnya
+      const crowdTop = scene.floor - scene.depth - peepHeight * 1.03;
+      scene.lanes = Array.from(
+        { length: laneCount },
+        (_, lane) => crowdTop - fit.font * 1.1 - fit.bubble - lane * (fit.bubble + fit.font * 0.5),
+      );
+
+      if (hostCell) {
+        const scale = scene.cellScale * 1.12;
+        hostBox.width = hostCell[2] * scale;
+        hostBox.height = hostCell[3] * scale;
+        hostBox.x = view.width * (view.width < 640 ? 0.5 : hostPosition);
+        // berdiri sedikit di depan baris terdepan
+        hostBox.ground = scene.floor + (view.height - scene.floor) * 0.45;
+      }
+
+      // Keramaian: kira-kira satu orang tiap 4% tinggi badan, di seluruh lebar layar.
+      populate(clamp(Math.round((view.width / (peepHeight * 0.042)) * density), 10, 180));
+      return true;
+    };
+
+    // ---------------------------------------------------------------- gambar
     /**
-     * Balon ucapan sebagai SATU bentuk utuh: kotak bersudut bulat yang ekornya menyatu halus di sisi bawah.
+     * Balon ucapan sebagai satu bentuk utuh: kotak bersudut bulat yang ekornya menyatu di sisi bawah.
      * Garis tepi warna kertas memisahkannya dari kepala di belakangnya.
-     * tailX: titik ujung ekor. tail: setengah lebar pangkal ekor.
      */
-    const roundedBubble = (
+    const bubbleShape = (
       left: number,
       top: number,
       width: number,
       height: number,
-      tailX: number,
-      tail: number,
+      tipX: number,
+      tailHalf: number,
       radius = height / 2,
     ) => {
       const r = Math.min(radius, height / 2, width / 2);
       const right = left + width;
       const bottom = top + height;
       // pangkal ekor harus berada di bagian lurus sisi bawah
-      const baseX = Math.max(left + r + tail, Math.min(right - r - tail, tailX));
-      const tipY = bottom + tail * 1.35;
+      const base = clamp(tipX, left + r + tailHalf, right - r - tailHalf);
 
       ctx.beginPath();
       ctx.moveTo(left + r, top);
@@ -321,10 +354,9 @@ export function CrowdCanvas({
       ctx.arcTo(right, top, right, top + r, r);
       ctx.lineTo(right, bottom - r);
       ctx.arcTo(right, bottom, right - r, bottom, r);
-      ctx.lineTo(baseX + tail, bottom);
-      // ekor: dua lengkung yang keluar mendatar dari sisi bawah dan bertemu di ujung
-      ctx.quadraticCurveTo(baseX + tail * 0.25, bottom, baseX, tipY);
-      ctx.quadraticCurveTo(baseX - tail * 0.25, bottom, baseX - tail, bottom);
+      ctx.lineTo(base + tailHalf, bottom);
+      ctx.quadraticCurveTo(base + tailHalf * 0.25, bottom, base, bottom + tailHalf * 1.35);
+      ctx.quadraticCurveTo(base - tailHalf * 0.25, bottom, base - tailHalf, bottom);
       ctx.lineTo(left + r, bottom);
       ctx.arcTo(left, bottom, left, bottom - r, r);
       ctx.lineTo(left, top + r);
@@ -332,255 +364,221 @@ export function CrowdCanvas({
       ctx.closePath();
 
       ctx.lineJoin = "round";
-      ctx.lineWidth = Math.max(3, stage.bubbleFont * 0.32);
-      ctx.strokeStyle = paper;
+      ctx.lineWidth = Math.max(3, scene.font * 0.32);
+      ctx.strokeStyle = colors.paper;
       ctx.stroke();
-      ctx.fillStyle = ink;
+      ctx.fillStyle = colors.ink;
       ctx.fill();
     };
 
-    /** Kotak balon tuan rumah, dipakai juga sebagai area yang harus dihindari balon lain. */
-    const hostBubbleBox = () => {
-      if (!hostPeep || !bubbleImg || !bubbleImg.complete || bubbleImg.naturalWidth === 0) return null;
-      const peep: Peep = hostPeep;
-      const markHeight = Math.max(30, Math.min(92, peep.height * 0.17));
-      const markWidth = (markHeight * bubbleImg.naturalWidth) / bubbleImg.naturalHeight;
+    const hostLift = () => (reduceMotion ? 0 : ((Math.sin((clock * Math.PI * 2) / 2.8) + 1) / 2) * hostBox.height * 0.012);
+
+    /** Kotak balon tuan rumah; dipakai juga sebagai area yang harus dihindari balon lain. */
+    const hostBubble = () => {
+      if (!hostCell || !ready(mark)) return null;
+      const markHeight = clamp(hostBox.height * 0.17, 30, 92);
+      const markWidth = (markHeight * mark.naturalWidth) / mark.naturalHeight;
       const pad = markHeight * 0.32;
       const width = markWidth + pad * 2;
       const height = markHeight + pad * 2;
-      // di kanan atas kepala, tempat suaranya keluar
-      const left = Math.max(6, Math.min(stage.width - width - 6, peep.x + peep.width * 0.06));
-      const top = Math.max(4, headTop(peep) - height * 0.85);
-      return { left, top, width, height, markWidth, markHeight, pad };
+      const headTop = hostBox.ground - hostLift() - hostBox.height;
+      return {
+        left: clamp(hostBox.x + hostBox.width * 0.06, 6, view.width - width - 6),
+        top: Math.max(4, headTop - height * 0.85),
+        width,
+        height,
+        markWidth,
+        markHeight,
+        pad,
+      };
+    };
+
+    const drawFigure = (cell: Cell, x: number, feetY: number, width: number, height: number, flip: 1 | -1, lean: number) => {
+      ctx.save();
+      // titik putar di telapak kaki: badan oleng, kaki tetap di tanah
+      ctx.translate(x, feetY);
+      if (lean) ctx.rotate(lean);
+      if (flip === -1) ctx.scale(-1, 1);
+      ctx.drawImage(sheet, cell[0], cell[1], cell[2], cell[3], -width / 2, -height, width, height);
+      ctx.restore();
     };
 
     /**
-     * Balon celetukan berbaris rapi di jalur tetap di atas kerumunan, bukan menempel di tiap kepala.
-     * Yang berjalan ke kanan di jalur bawah, yang ke kiri di jalur atas (kalau ada dua jalur),
-     * jadi balon yang berpapasan tidak bertabrakan. Kalau dua balon di jalur yang sama berebut tempat,
-     * yang datang belakangan memudar dulu.
+     * Balon berbaris di jalur tetap di atas kerumunan. Yang berjalan ke kanan di jalur bawah,
+     * yang ke kiri di jalur atas, jadi balon yang berpapasan tidak bertabrakan. Kalau dua balon di jalur
+     * yang sama berebut tempat, yang masuk belakangan memudar dulu.
      */
-    const drawBubbles = () => {
-      const lanes = stage.bubbleLanes;
-      if (lanes.length === 0) return;
-      const hostBox = hostBubbleBox();
-      const gap = stage.bubbleFont * 0.9;
-      const height = stage.bubbleHeight;
-      const speakers = crowd.filter((peep) => peep.bubble).sort((a, b) => a.order - b.order);
-      const placed: Array<{ lane: number; x: number; width: number }> = [];
+    const drawBubbles = (dt: number, avoid: ReturnType<typeof hostBubble>) => {
+      if (scene.lanes.length === 0) return;
+      const gap = scene.font * 0.9;
+      const height = scene.bubbleHeight;
+      const taken: Array<{ lane: number; x: number; width: number }> = [];
+      const speakers = walkers.filter((walker) => walker.text).sort((a, b) => a.order - b.order);
+      // mendekati sasaran secara eksponensial, tidak tergantung jumlah frame per detik
+      const ease = dt > 0 ? 1 - Math.exp(-dt * 8) : 1;
 
-      for (const peep of speakers) {
-        const lane = lanes.length > 1 && peep.scaleX === -1 ? 1 : 0;
-        const top = lanes[lane];
-        const half = peep.bubbleWidth / 2;
-        let visible = peep.x - half >= 8 && peep.x + half <= stage.width - 8;
-        if (visible) {
-          visible = !placed.some(
-            (other) => other.lane === lane && Math.abs(other.x - peep.x) < (other.width + peep.bubbleWidth) / 2 + gap,
+      for (const walker of speakers) {
+        const lane = scene.lanes.length > 1 && walker.direction === -1 ? 1 : 0;
+        const top = scene.lanes[lane];
+        const half = walker.textWidth / 2;
+
+        let shown = walker.x - half >= 8 && walker.x + half <= view.width - 8;
+        if (shown) {
+          shown = !taken.some(
+            (other) => other.lane === lane && Math.abs(other.x - walker.x) < (other.width + walker.textWidth) / 2 + gap,
           );
         }
-        if (visible && hostBox) {
-          const overlapsX = peep.x + half + gap > hostBox.left && peep.x - half - gap < hostBox.left + hostBox.width;
-          const overlapsY = top + height + gap > hostBox.top && top - gap < hostBox.top + hostBox.height;
-          if (overlapsX && overlapsY) visible = false;
+        if (shown && avoid) {
+          const overlapsX = walker.x + half + gap > avoid.left && walker.x - half - gap < avoid.left + avoid.width;
+          const overlapsY = top + height + gap > avoid.top && top - gap < avoid.top + avoid.height;
+          if (overlapsX && overlapsY) shown = false;
         }
-        if (visible) placed.push({ lane, x: peep.x, width: peep.bubbleWidth });
+        if (shown) taken.push({ lane, x: walker.x, width: walker.textWidth });
 
-        // memudar halus menuju terlihat atau tersembunyi
-        const target = visible ? 1 : 0;
-        peep.bubbleAlpha = reduceMotion || !running ? target : peep.bubbleAlpha + (target - peep.bubbleAlpha) * 0.12;
-        if (peep.bubbleAlpha < 0.03) continue;
+        walker.alpha += ((shown ? 1 : 0) - walker.alpha) * ease;
+        if (walker.alpha < 0.03) continue;
 
-        ctx.globalAlpha = peep.bubbleAlpha;
-        roundedBubble(peep.x - half, top, peep.bubbleWidth, height, peep.x, stage.bubbleFont * 0.5);
-        ctx.font = bubbleFontCss();
-        ctx.fillStyle = paper;
+        ctx.globalAlpha = walker.alpha;
+        bubbleShape(walker.x - half, top, walker.textWidth, height, walker.x, scene.font * 0.5);
+        ctx.font = fontCss();
+        ctx.fillStyle = colors.paper;
         ctx.textBaseline = "middle";
         ctx.textAlign = "center";
-        ctx.fillText(peep.bubble ?? "", peep.x, top + height / 2 + stage.bubbleFont * 0.06);
+        ctx.fillText(walker.text ?? "", walker.x, top + height / 2 + scene.font * 0.06);
         ctx.globalAlpha = 1;
       }
     };
 
-    const drawHostBubble = () => {
-      const box = hostBubbleBox();
-      if (!box || !bubbleImg) return;
-      roundedBubble(
-        box.left,
-        box.top,
-        box.width,
-        box.height,
-        box.left + box.width * 0.28,
-        box.markHeight * 0.2,
-        box.height * 0.3,
-      );
-      ctx.drawImage(bubbleImg, box.left + box.pad, box.top + box.pad, box.markWidth, box.markHeight);
-    };
+    const paint = (dt: number) => {
+      ctx.setTransform(view.dpr, 0, 0, view.dpr, 0, 0);
+      ctx.clearRect(0, 0, view.width, view.height);
 
-    const drawPeep = (peep: Peep) => {
-      ctx.save();
-      // titik putar di telapak kaki: badan oleng, kaki tetap di tanah
-      ctx.translate(peep.x, peep.ground - peep.lift);
-      ctx.rotate(peep.rock);
-      ctx.scale(peep.scaleX, 1);
-      ctx.drawImage(img, ...peep.rect, -peep.width / 2, -peep.height, peep.width, peep.height);
-      ctx.restore();
-    };
+      for (const walker of walkers) {
+        drawFigure(
+          walker.cell,
+          walker.x,
+          walker.ground - (reduceMotion ? 0 : liftOf(walker)),
+          walker.cell[2] * scene.cellScale,
+          walker.cell[3] * scene.cellScale,
+          walker.direction,
+          reduceMotion ? 0 : leanOf(walker),
+        );
+      }
 
-    const render = () => {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      ctx.save();
-      ctx.scale(stage.dpr, stage.dpr);
-      for (const peep of crowd) drawPeep(peep);
       // balon digambar setelah semua orang supaya tidak tertutup orang di depannya
-      drawBubbles();
+      const box = hostBubble();
+      drawBubbles(dt, box);
+
       // tuan rumah paling akhir: selalu di depan, tidak pernah tertutup
-      if (hostPeep) {
-        drawPeep(hostPeep);
-        drawHostBubble();
+      if (hostCell) {
+        drawFigure(hostCell, hostBox.x, hostBox.ground - hostLift(), hostBox.width, hostBox.height, 1, 0);
+        if (box && ready(mark)) {
+          bubbleShape(box.left, box.top, box.width, box.height, box.left + box.width * 0.28, box.markHeight * 0.2, box.height * 0.3);
+          ctx.drawImage(mark, box.left + box.pad, box.top + box.pad, box.markWidth, box.markHeight);
+        }
       }
-      ctx.restore();
     };
 
-    const setRunning = (next: boolean) => {
-      if (reduceMotion || next === running) return;
-      running = next;
-      for (const peep of crowd) peep.walk?.paused(!next);
-      hostIdle?.paused(!next);
-      if (next) gsap.ticker.add(render);
-      else gsap.ticker.remove(render);
+    // ---------------------------------------------------------------- putar dan jeda
+    const frame = (now: number) => {
+      // dibatasi supaya orang tidak melompat jauh setelah tab lama ditinggal
+      const dt = Math.min(0.05, (now - lastTime) / 1000);
+      lastTime = now;
+      advance(dt);
+      paint(dt);
+      frameId = requestAnimationFrame(frame);
     };
 
-    const layout = () => {
-      stage.width = canvas.clientWidth;
-      stage.height = canvas.clientHeight;
-      if (stage.width === 0 || stage.height === 0) return;
-      stage.dpr = Math.min(window.devicePixelRatio || 1, 2);
-      // besar di layar besar, kecil di HP; tidak pernah melebihi jatah tinggi canvas
-      const byWidth = Math.max(minPeepHeight, Math.min(maxPeepHeight, sizeBase + stage.width * sizeByWidth));
-      let peepHeight = Math.min(byWidth, stage.height * maxHeightFraction);
+    const play = () => {
+      if (playing || reduceMotion || disposed || view.width === 0) return;
+      playing = true;
+      lastTime = performance.now();
+      frameId = requestAnimationFrame(frame);
+    };
 
-      // Ruang untuk jalur balon di atas kerumunan. Dua jalur kalau muat tanpa banyak mengecilkan orang,
-      // kalau tidak, satu jalur saja. Tanpa celetukan, tidak perlu ruang.
-      const minDepth = 0.14; // baris belakang paling sedikit naik 14% tinggi badan
-      const fit = (lanes: number) => {
-        const font = Math.max(11, Math.min(20, peepHeight * 0.05));
-        const bubble = Math.round(font * 2);
-        // jarak kepala ke jalur terbawah (1,1 huruf) + jalur-jalurnya + angkatan langkah (3% badan)
-        // + ruang napas di tepi atas, supaya balon tidak menempel ke apa pun yang ada di atas canvas
-        const reserve =
-          lanes === 0 ? 12 : lanes * bubble + (lanes - 1) * font * 0.5 + font * 1.1 + peepHeight * 0.03 + font * 1.6;
-        const bottomPad = Math.max(10, peepHeight * 0.05);
-        const maxPeep = (stage.height - bottomPad - reserve) / (1 + minDepth);
-        return { font, bubble, reserve, bottomPad, maxPeep };
-      };
-      let lanes = phrases.length > 0 ? 2 : 0;
-      let room = fit(lanes);
-      if (lanes === 2 && room.maxPeep < peepHeight * 0.94) {
-        lanes = 1;
-        room = fit(lanes);
+    const pause = () => {
+      playing = false;
+      cancelAnimationFrame(frameId);
+    };
+
+    let onScreen = false;
+    const sync = () => (onScreen && !document.hidden ? play() : pause());
+
+    // ---------------------------------------------------------------- tema, ukuran, muat
+    /** Pakai gambar sesuai tema. Versi gelap baru dimuat saat pertama kali dibutuhkan. */
+    const applyTheme = () => {
+      const dark = isDark();
+      colors.ink = dark ? "#ededed" : "#111111";
+      colors.paper = dark ? "#121212" : "#ffffff";
+      if (dark && srcDark && !sheets.dark) {
+        sheets.dark = new Image();
+        sheets.dark.onload = applyTheme;
+        sheets.dark.src = srcDark;
       }
-      if (room.maxPeep < peepHeight) {
-        peepHeight = Math.max(60, room.maxPeep);
-        room = fit(lanes);
+      if (dark && hostBubbleImageDark && !marks.dark) {
+        marks.dark = new Image();
+        marks.dark.onload = applyTheme;
+        marks.dark.src = hostBubbleImageDark;
       }
+      // sebelum versi gelap selesai dimuat, tetap pakai versi terang supaya tidak kosong
+      sheet = dark && ready(sheets.dark) ? sheets.dark : sheets.light;
+      mark = dark && ready(marks.dark) ? marks.dark : marks.light;
+      if (!disposed && !playing && view.width > 0) paint(0);
+    };
 
-      stage.peepHeight = peepHeight;
-      stage.scale = peepHeight / (img.naturalHeight / rowCount);
-      stage.floor = stage.height - room.bottomPad;
-      stage.depth = Math.max(0, Math.min(peepHeight * 0.5, stage.height - peepHeight - room.bottomPad - room.reserve));
-      stage.bubbleFont = room.font;
-      stage.bubbleHeight = room.bubble;
-      // jalur 0 tepat di atas kepala baris paling belakang, jalur 1 di atasnya
-      const crowdTop = stage.floor - stage.depth - peepHeight * 1.03;
-      stage.bubbleLanes = Array.from(
-        { length: lanes },
-        (_, lane) => crowdTop - room.font * 1.1 - room.bubble - lane * (room.bubble + room.font * 0.5),
-      );
-      canvas.width = Math.round(stage.width * stage.dpr);
-      canvas.height = Math.round(stage.height * stage.dpr);
-
-      for (const peep of crowd) peep.walk?.kill();
-      crowd.length = 0;
-      available.length = 0;
-      // Keramaian: badan penuh jauh lebih ramping dari setengah badan, jadi jumlahnya harus lebih banyak
-      // supaya sama ramainya. Kira-kira satu orang tiap 4% tinggi badan, di seluruh lebar layar.
-      const count = Math.min(180, Math.max(10, Math.round((stage.width / (stage.peepHeight * 0.042)) * density)));
-      fillWalkers(count);
-      available.push(...walkers);
-      for (let i = 0; i < count; i++) addPeepToCrowd().walk?.progress(Math.random());
-      placeHost();
-      render();
+    const relayout = () => {
+      if (disposed || !measure()) return;
+      paint(0);
+      sync();
     };
 
     let resizeTimer = 0;
-    let lastWidth = 0;
-    let lastHeight = 0;
-    const resizeObserver = new ResizeObserver(() => {
-      const { clientWidth, clientHeight } = canvas;
-      if (clientWidth === lastWidth && clientHeight === lastHeight) return;
-      lastWidth = clientWidth;
-      lastHeight = clientHeight;
+    let seenWidth = 0;
+    let seenHeight = 0;
+    const resizeWatcher = new ResizeObserver(() => {
+      if (canvas.clientWidth === seenWidth && canvas.clientHeight === seenHeight) return;
+      seenWidth = canvas.clientWidth;
+      seenHeight = canvas.clientHeight;
       window.clearTimeout(resizeTimer);
-      resizeTimer = window.setTimeout(layout, 150);
+      resizeTimer = window.setTimeout(relayout, 150);
     });
+    const visibilityWatcher = new IntersectionObserver(
+      ([entry]) => {
+        onScreen = entry.isIntersecting;
+        sync();
+      },
+      { rootMargin: "80px" },
+    );
+    const themeWatcher = new MutationObserver(applyTheme);
 
-    const intersectionObserver = new IntersectionObserver(([entry]) => setRunning(entry.isIntersecting), {
-      rootMargin: "80px",
-    });
-    const onVisibility = () => setRunning(!document.hidden);
-
-    /** Pakai gambar sesuai tema. Versi gelap baru dimuat saat pertama kali dibutuhkan. */
-    const applyTheme = () => {
-      ({ ink, paper } = palette());
-      const dark = isDark();
-      if (dark && srcDark && !darkImg) {
-        darkImg = new Image();
-        darkImg.onload = applyTheme;
-        darkImg.src = srcDark;
-      }
-      if (dark && hostBubbleImageDark && !darkMark) {
-        darkMark = new Image();
-        darkMark.onload = applyTheme;
-        darkMark.src = hostBubbleImageDark;
-      }
-      // sebelum versi gelap selesai dimuat, tetap pakai versi terang supaya tidak kosong
-      img = dark && darkImg && darkImg.complete && darkImg.naturalWidth > 0 ? darkImg : lightImg;
-      bubbleImg = dark && darkMark && darkMark.complete && darkMark.naturalWidth > 0 ? darkMark : lightMark;
-      if (!disposed && !running && lightImg.complete && stage.width > 0) render();
-    };
-    const themeObserver = new MutationObserver(applyTheme);
-
-    lightImg.onload = () => {
+    sheets.light.onload = () => {
       if (disposed) return;
-      readSprite();
-      lastWidth = canvas.clientWidth;
-      lastHeight = canvas.clientHeight;
-      layout();
+      sliceSheet();
+      seenWidth = canvas.clientWidth;
+      seenHeight = canvas.clientHeight;
       applyTheme();
-      themeObserver.observe(root, { attributes: true, attributeFilter: ["data-theme"] });
-      resizeObserver.observe(canvas);
-      intersectionObserver.observe(canvas);
-      document.addEventListener("visibilitychange", onVisibility);
+      relayout();
+      themeWatcher.observe(root, { attributes: true, attributeFilter: ["data-theme"] });
+      resizeWatcher.observe(canvas);
+      visibilityWatcher.observe(canvas);
+      document.addEventListener("visibilitychange", sync);
     };
-    lightImg.src = src;
-    if (lightMark && hostBubbleImage) {
-      lightMark.onload = () => {
-        if (!disposed && !running && stage.width > 0) render();
+    sheets.light.src = src;
+    if (marks.light && hostBubbleImage) {
+      marks.light.onload = () => {
+        if (!disposed && !playing && view.width > 0) paint(0);
       };
-      lightMark.src = hostBubbleImage;
+      marks.light.src = hostBubbleImage;
     }
 
     return () => {
       disposed = true;
+      pause();
       window.clearTimeout(resizeTimer);
-      document.removeEventListener("visibilitychange", onVisibility);
-      themeObserver.disconnect();
-      resizeObserver.disconnect();
-      intersectionObserver.disconnect();
-      gsap.ticker.remove(render);
-      hostIdle?.kill();
-      for (const peep of crowd) peep.walk?.kill();
+      document.removeEventListener("visibilitychange", sync);
+      themeWatcher.disconnect();
+      resizeWatcher.disconnect();
+      visibilityWatcher.disconnect();
     };
   }, [
     src,
@@ -590,9 +588,9 @@ export function CrowdCanvas({
     phrases,
     maxPhraseLength,
     bubbleChance,
+    density,
     sizeBase,
     sizeByWidth,
-    density,
     minPeepHeight,
     maxPeepHeight,
     maxHeightFraction,

@@ -9,6 +9,15 @@ export const site = {
   url: (process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000").replace(/\/$/, ""),
 } as const;
 
+/**
+ * Media sosial yang tampil di footer. Isi `url` dengan alamat profil lengkap,
+ * misalnya "https://www.instagram.com/namaakun". Yang `url`-nya masih kosong tidak ditampilkan.
+ */
+export const socials: ReadonlyArray<{ label: string; handle: string; url: string }> = [
+  { label: "Instagram", handle: "", url: "" },
+  { label: "TikTok", handle: "", url: "" },
+];
+
 export function absoluteUrl(path = "/") {
   return `${site.url}${path.startsWith("/") ? path : `/${path}`}`;
 }

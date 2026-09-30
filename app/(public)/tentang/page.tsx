@@ -28,15 +28,11 @@ export default function AboutPage() {
         <p>Boleh didengerin, boleh dicuekin.</p>
       </div>
       <p className="border-t border-line pt-6 font-ui text-[13px] leading-relaxed text-muted">
-        Ilustrasi kerumunan di beranda:{" "}
+        Orang-orang di beranda digambar dari{" "}
         <a href="https://www.openpeeps.com/" className="underline hover:text-ink">
           Open Peeps
         </a>{" "}
-        karya Pablo Stanley. Animasinya diadaptasi dari{" "}
-        <a href="https://skiper-ui.com/" className="underline hover:text-ink">
-          Skiper UI
-        </a>{" "}
-        dan pen karya Szenia Zadvornykh.
+        karya Pablo Stanley.
       </p>
     </ReadColumn>
   );

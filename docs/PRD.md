@@ -640,7 +640,7 @@ Tabel `admins` tidak ada di rancangan awal bagian 5. Ditambahkan supaya punya ak
 ### Hero beranda, 30 September 2026
 
 - Hero selalu setinggi layar dikurangi header di perangkat apa pun (`100svh - var(--header-h)`). Header dibuat satu baris dengan tinggi tetap supaya hitungannya pasti; di HP logonya simbol saja.
-- Kerumunan berjalan di bagian bawah hero: `components/ui/crowd-canvas.tsx`, diadaptasi dari Skiper UI (atribusi wajib, ada di halaman Tentang) dengan ilustrasi Open Peeps (CC0).
+- Kerumunan berjalan di bagian bawah hero: `components/ui/crowd-canvas.tsx`, ditulis sendiri tanpa pustaka animasi (simulasi per frame dengan `requestAnimationFrame`), dengan ilustrasi Open Peeps (CC0). Versi awal diadaptasi dari Skiper UI dan memakai GSAP; sejak 30 September 2026 sudah ditulis ulang dari nol, jadi tidak ada kewajiban atribusi dan tidak ada dependensi `gsap`.
 - Sosoknya seluruh badan dengan kaki. Sprite dibuat oleh `node scripts/buat-sprite-kerumunan.cjs` dari pose berdiri Open Peeps lewat `react-peeps`, hasilnya `public/hero/kerumunan.png` (84 sosok). Kaki tidak digerakkan per frame: kesan berjalan datang dari pose melangkah, badan yang naik turun, dan olengan kiri kanan seirama langkah.
 - Sosok pertama di sprite adalah tuan rumah, "saya": diam di depan kerumunan dengan balon berisi logo. Tampangnya diatur di `HOST` dalam skrip sprite.
 - Ukuran sosok, balon, dan logo mengikuti lebar layar: tinggi sosok = 110px + 13% lebar layar, dijepit 130 sampai 460px, dan dikecilkan kalau tinggi area tidak cukup. Kira-kira 160px di HP, 275px di laptop, 360px di monitor full HD.
@@ -695,3 +695,13 @@ Menu: "Tulisan", "Ocehan", "Playlist", "Oknumnya". Keempatnya menggulir ke bagia
 
 - `/cerita`: semua tulisan panjang, dengan pilihan rak di atasnya.
 - `/celotehan`: semua tulisan sebaris, sumber yang sama dengan balon di beranda.
+
+### Footer
+
+Footer selalu berwarna kebalikan dari tema: hitam di mode terang, terang di mode gelap. Dua kolom: merek (logo, keterangan, satu kalimat, hak cipta) dan media sosial "Ketemu di tempat lain". Tidak ada menu dan tidak ada baris kredit di footer.
+
+Media sosial diisi di `socials` dalam `lib/site.ts`. Yang alamatnya masih kosong tidak ditampilkan.
+
+Tidak ada kewajiban kredit di footer. Animasi kerumunan ditulis sendiri, dan ilustrasi Open Peeps berlisensi CC0 (kredit tidak wajib; tetap disebut di halaman `/tentang` sebagai sopan santun).
+
+Bilah gulir browser disembunyikan di seluruh situs. Halaman tetap bisa digulir seperti biasa.

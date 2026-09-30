@@ -60,6 +60,9 @@
 html {
   background: var(--bg);
   scroll-behavior: smooth;
+  /* bilah gulir disembunyikan; halaman tetap bisa digulir seperti biasa */
+  scrollbar-width: none;
+  -ms-overflow-style: none;
   -webkit-text-size-adjust: 100%;
 }
 
@@ -69,6 +72,10 @@ body {
   font-family: var(--font-body);
   font-size: 1.125rem;
   line-height: 1.6;
+}
+
+html::-webkit-scrollbar {
+  display: none;
 }
 
 /* Bagian yang dituju menu: berhenti tepat di bawah header yang menempel, tidak tertutup olehnya. */
