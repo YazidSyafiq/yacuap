@@ -5,7 +5,7 @@ import { site, socials } from "@/lib/site";
 
 /**
  * Footer selalu berwarna kebalikan dari tema: hitam di mode terang, terang di mode gelap.
- * Dua kolom: merek (logo, satu kalimat, hak cipta) dan media sosial.
+ * Dua kolom: merek (logo, satu kalimat, hak cipta) dan media sosial. Di HP hak cipta selalu paling bawah.
  * Semua gambar logo di sini ikut dibalik di mode gelap (.theme-invert) supaya tetap kontras.
  */
 export function SiteFooter() {
@@ -14,7 +14,7 @@ export function SiteFooter() {
 
   return (
     <footer className="mt-auto bg-ink text-bg">
-      <Container className="grid gap-10 py-10 sm:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
+      <Container className="grid gap-x-10 gap-y-8 py-10 sm:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)] sm:gap-y-4">
         <div className="flex flex-col gap-4">
           <Link href="/" aria-label={`${site.name}, ke beranda`} className="flex items-center gap-2.5 self-start">
             {/* kotak logo berwarna latar halaman, jadi kontras dengan footer */}
@@ -41,12 +41,9 @@ export function SiteFooter() {
           <p className="max-w-[38ch] text-[17px] leading-snug text-bg/75">
             Apa aja yang lewat di kepala, ditulis di sini. Boleh didengerin, boleh dicuekin.
           </p>
-          <p className="font-ui text-[13px] text-bg/60">
-            © {year} {site.name}
-          </p>
         </div>
 
-        <div className="flex flex-col gap-3">
+        <div className="flex flex-col gap-3 sm:col-start-2 sm:row-span-2 sm:row-start-1">
           <h2 className="font-ui text-xs font-semibold uppercase tracking-[0.1em] text-bg/60">
             Ketemu di tempat lain
           </h2>
@@ -65,6 +62,11 @@ export function SiteFooter() {
             <p className="text-[17px] text-bg/75">Belum ada, nih. Nyusul ya.</p>
           )}
         </div>
+
+        {/* HP: paling bawah, setelah media sosial. Layar lebar: di kolom kiri, di bawah kalimat merek. */}
+        <p className="font-ui text-[13px] text-bg/60 sm:col-start-1 sm:row-start-2">
+          © {year} {site.name}
+        </p>
       </Container>
     </footer>
   );

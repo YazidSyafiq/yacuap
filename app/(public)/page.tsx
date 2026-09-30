@@ -1,11 +1,10 @@
-import Image from "next/image";
 import Link from "next/link";
 import { Hero } from "@/components/site/hero";
+import { Oknum } from "@/components/site/oknum";
 import { CategoryChip } from "@/components/ui/chip";
 import { Container } from "@/components/ui/container";
 import { categories, CATEGORY_SLUGS } from "@/lib/categories";
 import { getCelotehan } from "@/lib/celotehan";
-import { site } from "@/lib/site";
 
 // Beranda statis, disegarkan berkala. Saat admin sudah ada, penyegaran dipicu langsung saat menerbitkan.
 export const revalidate = 300;
@@ -94,28 +93,7 @@ export default async function HomePage() {
         </Container>
       </section>
 
-      <section id="oknumnya" className="section-anchor border-t border-line">
-        <Container className="grid gap-8 py-12 md:grid-cols-[auto_minmax(0,1fr)] md:gap-14">
-          <Image
-            src="/logo/yacuap-lockup-vertikal.png"
-            alt={site.name}
-            width={185}
-            height={200}
-            className="theme-invert self-start"
-          />
-          <div className="flex max-w-[680px] flex-col gap-5">
-            <h2 className="font-display text-[2rem] font-medium leading-tight sm:text-[2.5rem]">Oknumnya</h2>
-            <div className="flex flex-col gap-4 text-xl leading-relaxed">
-              <p>
-                {site.name} itu singkatan dari Yazid cuap-cuap. Isinya apa aja yang lewat di kepala: tulisan yang
-                panjang-panjang, ocehan yang cuma sebaris, sampai lagu yang lagi sering diputer.
-              </p>
-              <p>Nggak ada tema khusus, nggak ada jadwal. Kalau lagi pengen nulis, ya ditulis.</p>
-              <p className="text-muted">Boleh didengerin, boleh dicuekin.</p>
-            </div>
-          </div>
-        </Container>
-      </section>
+      <Oknum />
     </>
   );
 }

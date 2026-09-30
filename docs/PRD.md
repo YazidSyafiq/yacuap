@@ -78,6 +78,18 @@ Yang masih perlu: versi vektor (SVG) supaya tajam di semua ukuran dan bisa diwar
 
 Catatan tipografi: wordmark logo memakai sans bulat, sementara UI memakai Fraunces dan Instrument Sans. Ini disengaja: logo tampil sebagai gambar, bukan teks, jadi tidak perlu font tambahan. Judul situs di header adalah gambar lockup, bukan teks Fraunces.
 
+### Tombol
+
+Panjang dan lebar tombol selalu seragam di seluruh situs. Lebar tidak mengikuti panjang tulisan.
+
+| Jenis | Ukuran | Dipakai untuk |
+|---|---|---|
+| `md` (bawaan) | 236 x 44 px | Tombol utama halaman, misalnya dua tombol di hero |
+| `sm` | 160 x 40 px | Tombol kecil di dalam kartu atau baris data |
+| `block` | selebar formulir, tinggi sesuai ukurannya | Tombol di dalam formulir, misalnya Masuk |
+
+Aturan turunannya: tombol yang berdampingan selalu sama besar; tulisan tombol harus muat (paling panjang sekitar 28 karakter untuk `md`, 17 untuk `sm`); lebar dan tinggi tidak boleh ditimpa per tombol. Semua tombol dibuat lewat `components/ui/button.tsx` (`Button` atau `buttonClass`), dan ukuran baru hanya boleh ditambahkan di file itu.
+
 ### Kategori
 
 Tiga kategori tetap, dibedakan lewat gelap-terang chip, bukan warna:
@@ -686,12 +698,12 @@ Lebar maksimum situs 1408px (`--container-site: 88rem`) dengan padding samping 1
 
 ### Logo di header
 
-Logo kotak 52px, 44px di HP, dengan proporsi yang sama seperti balon tuan rumah di kerumunan (jarak simbol ke tepi 32% tinggi simbol, sudut 30% tinggi kotak), di sebelahnya wordmark "Yacuap" dengan keterangan kecil "Yazid cuap-cuap" di bawahnya. Di HP hanya logo kotaknya yang tampil, supaya menu dan tombol tema tetap muat satu baris.
+Logo kotak 52px, 44px di HP, dengan proporsi yang sama seperti balon tuan rumah di kerumunan (jarak simbol ke tepi 32% tinggi simbol, sudut 30% tinggi kotak), di sebelahnya wordmark "Yacuap" dengan keterangan kecil "Yazid cuap-cuap" di bawahnya. Logonya tampil sama di HP dan di layar lebar: kotak, wordmark, dan keterangan.
 Menu di header dan keterangan di bawah wordmark memakai Fraunces, huruf yang sama dengan judul hero. Keterangannya miring.
 
 ### Menu utama
 
-Menu: "Tulisan", "Ocehan", "Playlist", "Oknumnya". Keempatnya menggulir ke bagian di beranda (`/#tulisan`, `/#ocehan`, `/#playlist`, `/#oknumnya`), bukan membuka halaman lain. Header menempel di atas saat menggulir. Halaman `/cerita`, `/celotehan`, `/playlist`, dan `/tentang` tetap ada sebagai tujuan tautan "Lihat semua, dong" di tiap bagian. Musik, Pikiran, dan Absurd tidak lagi di menu; ketiganya jadi rak di halaman `/cerita` dan tetap punya halaman sendiri (`/musik`, `/pikiran`, `/absurd`). Di HP "Tentang" hanya ada di footer supaya menu muat satu baris.
+Menu: "Tulisan", "Ocehan", "Playlist", "Oknumnya". Keempatnya menggulir ke bagian di beranda (`/#tulisan`, `/#ocehan`, `/#playlist`, `/#oknumnya`), bukan membuka halaman lain. Header menempel di atas saat menggulir. Di HP menu tidak ditampilkan: header hanya berisi logo dan tombol tema, dan pengunjung berpindah bagian dengan menggulir atau lewat dua tombol di hero. Halaman `/cerita`, `/celotehan`, `/playlist`, dan `/tentang` tetap ada sebagai tujuan tautan "Lihat semua, dong" di tiap bagian. Musik, Pikiran, dan Absurd tidak lagi di menu; ketiganya jadi rak di halaman `/cerita` dan tetap punya halaman sendiri (`/musik`, `/pikiran`, `/absurd`). Di HP "Tentang" hanya ada di footer supaya menu muat satu baris.
 
 - `/cerita`: semua tulisan panjang, dengan pilihan rak di atasnya.
 - `/celotehan`: semua tulisan sebaris, sumber yang sama dengan balon di beranda.
@@ -705,3 +717,13 @@ Media sosial diisi di `socials` dalam `lib/site.ts`. Yang alamatnya masih kosong
 Tidak ada kewajiban kredit di footer. Animasi kerumunan ditulis sendiri, dan ilustrasi Open Peeps berlisensi CC0 (kredit tidak wajib; tetap disebut di halaman `/tentang` sebagai sopan santun).
 
 Bilah gulir browser disembunyikan di seluruh situs. Halaman tetap bisa digulir seperti biasa.
+
+### Bagian Oknumnya
+
+Tentang penulisnya, bukan tentang situsnya: sapaan "Halo, saya Yazid.", dua paragraf pendek soal orangnya, lalu blok kecil "Terus, kenapa bikin ini?" berisi alasan membuat situs. Komponennya `components/site/oknum.tsx`.
+
+Gambarnya ilustrasi Yazid sendiri (sumber `docs/its me.png`, hitam putih, setengah badan, mengacungkan jempol). Dipotong dari latarnya oleh `node scripts/potong-gambar-oknum.cjs` menjadi `public/oknum/yazid.png` (mode terang) dan `public/oknum/yazid-gelap.png` (mode gelap, dengan garis tepi terang seperti stiker). Gambar berada di tengah tinggi bagian, dengan jarak ke footer.
+
+Animasi bagian ini dua saja dan biasa-biasa: gambar beserta balonnya mengambang sangat pelan (7px, 6 detik), dan balon sapaan "Sip, makasih udah mampir!" berulang tiap 7 detik: menyembul, bertahan sekitar 5 detik, mengecil hilang, lalu muncul lagi. Teksnya diam. Keduanya mati kalau pengunjung meminta animasi dikurangi. Pernah dicoba gambar memantul, balon ocehan di sekitar kepala, dan awan pikiran, semuanya dibatalkan karena hasilnya tidak bagus.
+
+Paragraf tentang orangnya masih draf: isinya ditebak dari arah situs (musik, isi kepala, hal absurd), belum dari cerita Yazid sendiri.

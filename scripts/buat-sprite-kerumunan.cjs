@@ -108,7 +108,11 @@ function randomLook() {
   };
 }
 
-async function renderCell(look) {
+/** Satu sosok dalam satu sel. `k` memperbesar semuanya, dipakai untuk potret tuan rumah. */
+async function renderCell(look, k = 1) {
+  const cellW = CELL_W * k;
+  const cellH = CELL_H * k;
+  const footPad = FOOT_PAD * k;
   let svg = renderToStaticMarkup(
     React.createElement(Peep, {
       ...look,
@@ -118,32 +122,32 @@ async function renderCell(look) {
     }),
   );
   if (!svg.includes("xmlns=")) svg = svg.replace("<svg", '<svg xmlns="http://www.w3.org/2000/svg"');
-  const width = Math.round(VIEW.width * PX_PER_UNIT);
-  const height = Math.round(VIEW.height * PX_PER_UNIT);
+  const width = Math.round(VIEW.width * PX_PER_UNIT * k);
+  const height = Math.round(VIEW.height * PX_PER_UNIT * k);
   const raster = await sharp(Buffer.from(svg), { density: 300 }).resize({ width, height, fit: "fill" }).png().toBuffer();
   // pangkas ruang kosong, lalu taruh di sel: kaki menempel di dasar sel, badan di tengah
   const trimmed = await sharp(raster).trim({ threshold: 1 }).toBuffer({ resolveWithObject: true });
   let { data, info } = trimmed;
-  const maxW = CELL_W - 12;
-  const maxH = CELL_H - 8 - FOOT_PAD;
+  const maxW = cellW - 12 * k;
+  const maxH = cellH - 8 * k - footPad;
   if (info.width > maxW || info.height > maxH) {
     const fitted = await sharp(data).resize({ width: maxW, height: maxH, fit: "inside" }).toBuffer({ resolveWithObject: true });
     data = fitted.data;
     info = fitted.info;
   }
-  // satu sel utuh, kaki FOOT_PAD px di atas dasar sel
-  const light = await sharp({ create: { width: CELL_W, height: CELL_H, channels: 4, background: { r: 0, g: 0, b: 0, alpha: 0 } } })
-    .composite([{ input: data, left: Math.floor((CELL_W - info.width) / 2), top: CELL_H - FOOT_PAD - info.height }])
+  // satu sel utuh, kaki footPad px di atas dasar sel
+  const light = await sharp({ create: { width: cellW, height: cellH, channels: 4, background: { r: 0, g: 0, b: 0, alpha: 0 } } })
+    .composite([{ input: data, left: Math.floor((cellW - info.width) / 2), top: cellH - footPad - info.height }])
     .png()
     .toBuffer();
-  return { light, dark: await withHalo(light) };
+  return { light, dark: await withHalo(light, cellW, cellH, k) };
 }
 
 /** Siluet sosok dilebarkan beberapa piksel dan diwarnai terang, lalu sosok aslinya ditaruh di atasnya. */
-async function withHalo(cell) {
-  const alpha = await sharp(cell).extractChannel("alpha").blur(HALO_BLUR).threshold(28).toColourspace("b-w").raw().toBuffer();
-  const halo = await sharp({ create: { width: CELL_W, height: CELL_H, channels: 3, background: HALO } })
-    .joinChannel(alpha, { raw: { width: CELL_W, height: CELL_H, channels: 1 } })
+async function withHalo(cell, cellW, cellH, k) {
+  const alpha = await sharp(cell).extractChannel("alpha").blur(HALO_BLUR * k).threshold(28).toColourspace("b-w").raw().toBuffer();
+  const halo = await sharp({ create: { width: cellW, height: cellH, channels: 3, background: HALO } })
+    .joinChannel(alpha, { raw: { width: cellW, height: cellH, channels: 1 } })
     .png()
     .toBuffer();
   return sharp(halo).composite([{ input: cell }]).png().toBuffer();

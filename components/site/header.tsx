@@ -9,12 +9,13 @@ const navLink = "py-2 text-ink hover:text-muted";
 /**
  * Menu utama menggulir ke bagian-bagian di beranda, bukan membuka halaman lain.
  * Alamatnya diawali "/" supaya tetap jalan dari halaman mana pun.
- * Labelnya pendek supaya muat satu baris di HP.
+ * Hanya tampil di layar lebar; di HP header cuma berisi logo dan tombol tema.
  */
 const MENU = [
   { href: "/#tulisan", label: "Tulisan" },
   { href: "/#ocehan", label: "Ocehan" },
   { href: "/#playlist", label: "Playlist" },
+  { href: "/#oknumnya", label: "Oknumnya" },
 ];
 
 /**
@@ -42,8 +43,8 @@ export function SiteHeader() {
               className="theme-invert h-[27px] w-auto sm:h-8"
             />
           </span>
-          {/* nama + keterangan di bawahnya. Di HP disembunyikan supaya menu tetap muat satu baris. */}
-          <span className="hidden flex-col sm:flex">
+          {/* nama + keterangan di bawahnya, tampil sama di HP dan di layar lebar */}
+          <span className="flex flex-col">
             <Image
               src="/logo/yacuap-wordmark.png"
               alt={site.name}
@@ -57,17 +58,16 @@ export function SiteHeader() {
             </span>
           </span>
         </Link>
-        {/* Fraunces, sama dengan judul hero, supaya header dan hero terasa satu kesatuan */}
-        <nav aria-label="Utama" className="flex items-center gap-3.5 font-display text-[15px] sm:gap-7 sm:text-lg">
+        {/*
+          Fraunces, sama dengan judul hero, supaya header dan hero terasa satu kesatuan.
+          Di HP menunya tidak ditampilkan: yang ada hanya logo dan tombol tema.
+        */}
+        <nav aria-label="Utama" className="flex items-center gap-7 font-display text-lg">
           {MENU.map((item) => (
-            <Link key={item.href} href={item.href} className={navLink}>
+            <Link key={item.href} href={item.href} className={`hidden sm:inline ${navLink}`}>
               {item.label}
             </Link>
           ))}
-          {/* disembunyikan di HP supaya muat satu baris; tetap ada di footer */}
-          <Link href="/#oknumnya" className="hidden py-2 text-ink hover:text-muted sm:inline">
-            Oknumnya
-          </Link>
           <ThemeToggle />
         </nav>
       </Container>

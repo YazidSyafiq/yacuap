@@ -111,3 +111,72 @@ html::-webkit-scrollbar {
 .mono-img {
   filter: grayscale(1);
 }
+
+/* Ekor balon sapaan di bagian Oknumnya: segitiga kecil di sisi bawah, sewarna balonnya. */
+.greeting-bubble::after {
+  content: "";
+  position: absolute;
+  left: 1.6rem;
+  top: calc(100% - 1px);
+  width: 0.85rem;
+  height: 0.7rem;
+  background: var(--ink);
+  clip-path: polygon(0 0, 100% 0, 55% 100%);
+}
+
+/* ---------------------------------------------------------------------------
+ * Animasi kecil. Hanya aktif kalau pengunjung tidak meminta animasi dikurangi.
+ * ------------------------------------------------------------------------- */
+@media (prefers-reduced-motion: no-preference) {
+  /* mengambang sangat pelan: naik beberapa piksel lalu turun lagi */
+  .float-slow {
+    animation: float-slow 6s ease-in-out infinite;
+  }
+
+  @keyframes float-slow {
+    0%,
+    100% {
+      transform: translateY(0);
+    }
+    50% {
+      transform: translateY(-7px);
+    }
+  }
+
+  /*
+   * Balon sapaan berulang tiap 7 detik: menyembul dengan sedikit pantulan, bertahan,
+   * mengecil hilang, jeda sebentar, lalu menyembul lagi.
+   */
+  .bubble-loop {
+    animation: bubble-loop 7s ease-in-out infinite;
+    transform-origin: 1.9rem 100%;
+  }
+
+  @keyframes bubble-loop {
+    0% {
+      opacity: 0;
+      transform: scale(0.5);
+    }
+    5% {
+      opacity: 1;
+      transform: scale(1.08);
+    }
+    9% {
+      opacity: 1;
+      transform: scale(1);
+    }
+    80% {
+      opacity: 1;
+      transform: scale(1);
+    }
+    84% {
+      opacity: 1;
+      transform: scale(1.06);
+    }
+    90%,
+    100% {
+      opacity: 0;
+      transform: scale(0.5);
+    }
+  }
+}

@@ -24,7 +24,7 @@ export function LoginForm({ initialError }: { initialError?: string }) {
           {error}
         </p>
       ) : null}
-      <Button type="submit" disabled={pending} className="mt-2">
+      <Button type="submit" disabled={pending} block className="mt-2">
         {pending ? "Masuk..." : "Masuk"}
       </Button>
     </form>
