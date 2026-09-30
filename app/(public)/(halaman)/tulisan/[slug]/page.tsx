@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { AuthorPhoto } from "@/components/site/author-photo";
 import { PostRow, PostTags } from "@/components/site/post-cards";
 import { ReadColumn } from "@/components/ui/container";
 import { getPost, getPosts, postMeta } from "@/lib/posts";
@@ -54,24 +55,8 @@ export default async function ReadPage({ params }: PageProps<"/tulisan/[slug]">)
             <p className="text-xl italic leading-snug text-muted sm:text-[22px]">{post.excerpt}</p>
           ) : null}
           <div className="flex items-center gap-3.5 pt-2">
-            {/*
-              Penulisnya selalu satu orang: gambar dari bagian Oknumnya, utuh di dalam lingkaran.
-              Lingkarannya kebalikan tema: hitam di mode terang, abu terang di mode gelap.
-            */}
-            <Image
-              src="/oknum/penulis-hitam.png"
-              alt=""
-              width={56}
-              height={56}
-              className="size-14 shrink-0 rounded-full dark:hidden"
-            />
-            <Image
-              src="/oknum/penulis-abu.png"
-              alt=""
-              width={56}
-              height={56}
-              className="hidden size-14 shrink-0 rounded-full dark:block"
-            />
+            {/* penulisnya selalu satu orang, fotonya sama di seluruh situs */}
+            <AuthorPhoto size={56} />
             <div className="flex flex-col gap-0.5 font-ui">
               <span className="text-[15px] font-semibold">{site.author}</span>
               <span className="text-[13px] text-muted">{postMeta(post)}</span>

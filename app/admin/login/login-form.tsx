@@ -4,6 +4,7 @@ import { useActionState, useState, type FormEvent } from "react";
 import { Button } from "@/components/ui/button";
 import { Input, Label } from "@/components/ui/field";
 import { FormError, invalidField } from "@/components/ui/form-error";
+import { PasswordInput } from "@/components/ui/password-input";
 import { cn } from "@/lib/cn";
 import { signIn, type LoginState } from "../actions";
 
@@ -13,7 +14,6 @@ const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export function LoginForm({ initialError }: { initialError?: string }) {
   const [state, action, pending] = useActionState<LoginState, FormData>(signIn, undefined);
-  const [visible, setVisible] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const error = state?.error ?? initialError;
 
@@ -49,7 +49,7 @@ export function LoginForm({ initialError }: { initialError?: string }) {
           aria-invalid={Boolean(fieldErrors.email)}
           aria-describedby={fieldErrors.email ? "email-error" : undefined}
           onChange={() => clear("email")}
-          className={cn(fieldErrors.email && invalidField)}
+          className={cn("rounded-xl px-4", fieldErrors.email && invalidField)}
         />
         {fieldErrors.email ? (
           <FormError variant="field" id="email-error">
@@ -58,44 +58,16 @@ export function LoginForm({ initialError }: { initialError?: string }) {
         ) : null}
       </div>
       <div className="flex flex-col gap-2">
-        <Label htmlFor="password">Kata sandi</Label>
-        <div className="relative">
-          <Input
-            id="password"
-            name="password"
-            type={visible ? "text" : "password"}
-            autoComplete="current-password"
-            placeholder="••••••••"
-            aria-invalid={Boolean(fieldErrors.password)}
-            aria-describedby={fieldErrors.password ? "password-error" : undefined}
-            onChange={() => clear("password")}
-            className={cn("pr-11", fieldErrors.password && invalidField)}
-          />
-          <button
-            type="button"
-            onClick={() => setVisible((value) => !value)}
-            title={visible ? "Sembunyikan kata sandi" : "Tampilkan kata sandi"}
-            aria-label={visible ? "Sembunyikan kata sandi" : "Tampilkan kata sandi"}
-            aria-pressed={visible}
-            className="absolute right-3 top-1/2 -translate-y-1/2 text-muted hover:text-ink"
-          >
-            <svg
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="1.8"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              aria-hidden="true"
-              className="size-[18px]"
-            >
-              <path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12Z" />
-              <circle cx="12" cy="12" r="3" />
-              {/* garis coret saat kata sandi sedang terlihat */}
-              {visible ? <path d="M4 4l16 16" /> : null}
-            </svg>
-          </button>
-        </div>
+        <Label htmlFor="password">Kata Sandi</Label>
+        <PasswordInput
+          id="password"
+          name="password"
+          autoComplete="current-password"
+          aria-invalid={Boolean(fieldErrors.password)}
+          aria-describedby={fieldErrors.password ? "password-error" : undefined}
+          onChange={() => clear("password")}
+          className={cn(fieldErrors.password && invalidField)}
+        />
         {fieldErrors.password ? (
           <FormError variant="field" id="password-error">
             {fieldErrors.password}

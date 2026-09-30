@@ -12,11 +12,11 @@ export function NewTagForm() {
   return (
     <form action={action} className="flex flex-col gap-4">
       <div className="flex flex-col gap-1.5">
-        <Label htmlFor="new-tag-name">Nama tag</Label>
+        <Label htmlFor="new-tag-name">Nama Tag</Label>
         <Input id="new-tag-name" name="name" required maxLength={30} placeholder="Misalnya: Jalan-jalan" />
       </div>
       <div className="flex flex-col gap-1.5">
-        <Label htmlFor="new-tag-description">Keterangan singkat</Label>
+        <Label htmlFor="new-tag-description">Keterangan Singkat</Label>
         <Textarea
           id="new-tag-description"
           name="description"

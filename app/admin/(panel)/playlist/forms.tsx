@@ -25,11 +25,11 @@ export function PlaylistForm({ playlist }: { playlist: { id: string; name: strin
     <form action={action} className="flex flex-col gap-4">
       <input type="hidden" name="id" value={playlist.id} />
       <div className="flex flex-col gap-1.5">
-        <Label htmlFor="name">Nama playlist</Label>
+        <Label htmlFor="name">Nama Playlist</Label>
         <Input id="name" name="name" required maxLength={80} defaultValue={playlist.name} />
       </div>
       <div className="flex flex-col gap-1.5">
-        <Label htmlFor="description">Keterangan singkat</Label>
+        <Label htmlFor="description">Keterangan Singkat</Label>
         <Textarea
           id="description"
           name="description"
@@ -52,11 +52,11 @@ export function AddTrackForm({ playlistId }: { playlistId: string }) {
     <form action={action} className="flex flex-col gap-4">
       <input type="hidden" name="playlistId" value={playlistId} />
       <div className="flex flex-col gap-1.5">
-        <Label htmlFor="url">Tautan YouTube lagunya</Label>
+        <Label htmlFor="url">Tautan YouTube Lagunya</Label>
         <Input id="url" name="url" required inputMode="url" placeholder="https://www.youtube.com/watch?v=..." />
       </div>
       <div className="flex flex-col gap-1.5">
-        <Label htmlFor="note">Kenapa lagu ini masuk?</Label>
+        <Label htmlFor="note">Kenapa Lagu Ini Masuk?</Label>
         <Textarea id="note" name="note" rows={2} maxLength={400} placeholder="Boleh dikosongin, bisa diisi belakangan." />
       </div>
       <Feedback state={state} />

@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Image from "next/image";
+import { AdminPageHeader } from "@/components/admin/page-header";
 import { Card } from "@/components/ui/card";
 import { Input, Label, Textarea } from "@/components/ui/field";
 import { SubmitButton } from "@/components/ui/submit-button";
@@ -58,22 +59,19 @@ export default async function AdminPlaylistPage() {
   const items = [...playlist.playlist_tracks].sort((a, b) => a.position - b.position);
 
   return (
-    <div className="flex max-w-3xl flex-col gap-8">
-      <div className="flex flex-col gap-1.5">
-        <h1 className="font-display text-[2.125rem] font-medium">Playlist</h1>
-        <p className="text-sm text-muted">
-          Tempel tautan YouTube untuk menambah lagu. Judul, artis, dan sampulnya diambil otomatis, dan perubahan
-          langsung tampil di situs.
-        </p>
-      </div>
+    <div className="flex max-w-3xl flex-col gap-7">
+      <AdminPageHeader
+        title="Playlist"
+        note="Tempel tautan YouTube untuk menambah lagu. Judul, artis, dan sampulnya diambil otomatis, dan perubahan langsung tampil di situs."
+      />
 
       <Card className="flex flex-col gap-5 p-6">
-        <h2 className="font-display text-xl font-medium">Tambah lagu</h2>
+        <h2 className="font-display text-xl font-medium">Tambah Lagu</h2>
         <AddTrackForm playlistId={playlist.id} />
       </Card>
 
       <section className="flex flex-col gap-3">
-        <h2 className="font-display text-xl font-medium">Isi playlist ({items.length} lagu)</h2>
+        <h2 className="font-display text-xl font-medium">Isi Playlist ({items.length} lagu)</h2>
         {items.length === 0 ? (
           <p className="text-sm text-muted">Belum ada lagu. Tempel tautan YouTube di atas.</p>
         ) : (
@@ -106,7 +104,7 @@ export default async function AdminPlaylistPage() {
                         </div>
                       </div>
                       <div className="flex flex-col gap-1.5">
-                        <Label htmlFor={`note-${track.id}`}>Kenapa lagu ini masuk?</Label>
+                        <Label htmlFor={`note-${track.id}`}>Kenapa Lagu Ini Masuk?</Label>
                         <Textarea id={`note-${track.id}`} name="note" rows={2} maxLength={400} defaultValue={item.note} />
                       </div>
                       <div className="flex flex-wrap items-center gap-2">
@@ -150,7 +148,7 @@ export default async function AdminPlaylistPage() {
       </section>
 
       <Card className="flex flex-col gap-5 p-6">
-        <h2 className="font-display text-xl font-medium">Nama dan keterangan</h2>
+        <h2 className="font-display text-xl font-medium">Nama dan Keterangan</h2>
         <PlaylistForm playlist={{ id: playlist.id, name: playlist.name, description: playlist.description }} />
       </Card>
     </div>

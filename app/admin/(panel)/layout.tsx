@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
+import { AdminShell } from "@/components/admin/admin-shell";
 import { requireAdmin } from "@/lib/auth";
-import { AdminSidebar } from "./sidebar";
+import { signOut } from "../actions";
 
 export const metadata: Metadata = {
   title: { default: "Admin", template: "%s · Admin Yacuap" },
@@ -14,9 +15,8 @@ export default async function AdminLayout({ children }: LayoutProps<"/admin">) {
   const { user } = await requireAdmin();
 
   return (
-    <div className="flex flex-1 flex-col font-ui md:flex-row">
-      <AdminSidebar email={user.email ?? ""} />
-      <main className="min-w-0 flex-1 px-5 py-8 md:px-12 md:py-10">{children}</main>
-    </div>
+    <AdminShell email={user.email ?? ""} signOut={signOut}>
+      {children}
+    </AdminShell>
   );
 }

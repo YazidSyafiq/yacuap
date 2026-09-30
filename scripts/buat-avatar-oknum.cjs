@@ -1,4 +1,4 @@
-// Avatar penulis untuk halaman baca: gambar di bagian Oknumnya, utuh di dalam lingkaran.
+// Avatar penulis untuk halaman baca: gambar di bagian Oknumnya, utuh di dalam kotak bersudut bulat (seperti kotak logo di header).
 // Versi hitam memakai garis tepi putih tebal seperti stiker (sama dengan gambar aslinya di docs/its me.png).
 // Jalankan: node scripts/buat-avatar-oknum.cjs
 const sharp = require("sharp");
@@ -27,13 +27,15 @@ const OUTLINE = 30; // tebal garis tepi stiker, dalam piksel gambar sumber
     .png()
     .toBuffer();
 
-  // Kanvas persegi selebar diagonal gambar, supaya seluruh stiker masuk ke dalam lingkaran avatar.
-  const side = Math.ceil(Math.hypot(width, height) * 1.02);
-  // Dua versi, kebalikan dari tema: lingkaran hitam untuk mode terang, lingkaran abu terang untuk mode gelap (putih polos terlalu mencolok).
+  // Proporsinya disamakan dengan kotak logo di header: jarak gambar ke tepi atas dan bawah kotak
+  // 32% dari tinggi gambar, jadi sisi kotak = tinggi gambar x 1,64. (Tinggi gambar dihitung tanpa ruang garis tepi.)
+  const figureHeight = height - OUTLINE * 4;
+  const side = Math.ceil(figureHeight * 1.64);
+  // Dua versi, kebalikan dari tema: kotak hitam untuk mode terang, kotak abu terang untuk mode gelap (putih polos terlalu mencolok).
 
   const versions = [
-    { out: "public/oknum/penulis-hitam.png", background: "#111111", layers: [sticker, figure] },
-    { out: "public/oknum/penulis-abu.png", background: "#d4d4d4", layers: [sticker, figure] },
+    { out: "public/oknum/penulis-kotak-hitam.png", background: "#111111", layers: [sticker, figure] },
+    { out: "public/oknum/penulis-kotak-abu.png", background: "#d4d4d4", layers: [sticker, figure] },
   ];
   for (const version of versions) {
     const canvas = await sharp({ create: { width: side, height: side, channels: 3, background: version.background } })

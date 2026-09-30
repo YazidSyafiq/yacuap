@@ -1,16 +1,18 @@
 import Image from "next/image";
 import Link from "next/link";
 import { Container } from "@/components/ui/container";
-import { site, socials } from "@/lib/site";
+import { site } from "@/lib/site";
+import { getSocials } from "@/lib/socials";
 
 /**
  * Footer selalu berwarna kebalikan dari tema: hitam di mode terang, terang di mode gelap.
  * Dua kolom: merek (logo, satu kalimat, hak cipta) dan media sosial. Di HP hak cipta selalu paling bawah.
  * Semua gambar logo di sini ikut dibalik di mode gelap (.theme-invert) supaya tetap kontras.
  */
-export function SiteFooter() {
+export async function SiteFooter() {
   const year = new Date().getFullYear();
-  const activeSocials = socials.filter((social) => social.url);
+  // diisi dari halaman Akun saya di admin
+  const activeSocials = await getSocials();
 
   return (
     <footer className="mt-auto bg-ink text-bg">
@@ -51,7 +53,7 @@ export function SiteFooter() {
             <ul className="flex flex-col gap-2 font-display text-lg">
               {activeSocials.map((social) => (
                 <li key={social.label}>
-                  <a href={social.url} target="_blank" rel="noreferrer" className="hover:text-bg/65">
+                  <a href={social.url} target="_blank" rel="noopener noreferrer" className="hover:text-bg/65">
                     {social.label}
                     {social.handle ? <span className="pl-2 font-ui text-sm text-bg/60">@{social.handle}</span> : null}
                   </a>
