@@ -1,0 +1,697 @@
+# Yacuap
+
+Dokumen produk, desain, dan rencana pengerjaan. Versi 1, 30 September 2026.
+
+Mockup visual: https://claude.ai/artifact/X8UPH9YjPAANsvjnBfcarJ
+
+---
+
+## 1. Ringkasan
+
+Yacuap (dari "Yazid" dan "cuap-cuap") adalah website pribadi Yazid Syafiq Irsyad untuk menuangkan cerita: tulisan tentang musik, hasil pemikiran, dan hal-hal absurd. Selain tulisan panjang ala Medium, website ini juga jadi tempat mengatur dan membagikan playlist musik. Setiap tulisan bisa diubah otomatis jadi kartu gambar untuk Instagram dan TikTok.
+
+Penulisnya satu orang. Pembaca tidak perlu akun, dan bisa berkomentar secara anonim. Komentar langsung tampil.
+
+### Tujuan
+
+- Punya tempat menulis yang nyaman, fokus ke teks, tanpa gangguan.
+- Playlist punya "cerita" per lagu, bukan sekadar daftar.
+- Konten bisa dibagikan ke Instagram dan TikTok tanpa screenshot manual.
+- Tampilan konsisten monokrom, termasuk semua cover foto.
+
+### Bukan tujuan (v1)
+
+- Multi-penulis atau kolaborasi.
+- Akun pembaca, login sosial, profil.
+- Newsletter, notifikasi email.
+- Integrasi Spotify API otomatis (cukup link manual).
+- Pembuatan video otomatis untuk TikTok (cukup gambar diam).
+
+---
+
+## 2. Prinsip desain
+
+- **Monokrom penuh.** Latar abu sangat terang, tinta hampir hitam, teks meta abu, tanpa warna aksen. Cover foto ikut diubah ke grayscale saat upload, jadi tidak ada satu pun elemen berwarna di seluruh website.
+- **Teks adalah bintangnya.** Kolom baca 680px, serif untuk badan tulisan, ukuran 20 sampai 21px, line-height longgar.
+- **Hierarki dari ukuran dan ketebalan**, bukan warna. Tombol utama hitam pekat, tombol sekunder outline.
+- **UI diam, konten bicara.** Chip kategori, garis, dan tombol harus terasa mundur dibanding judul dan cover.
+
+### Token warna
+
+| Token | Nilai | Dipakai untuk |
+|---|---|---|
+| `bg` | `#f4f4f4` | Latar halaman |
+| `surface` | `#ffffff` | Kartu, form, editor |
+| `ink` | `#111111` | Teks utama, tombol utama, sidebar admin |
+| `muted` | `#6a6a6a` | Tanggal, waktu baca, label, placeholder |
+| `line` | `#dcdcdc` | Garis pembatas, border kartu |
+| `border-strong` | `#c9c9c9` | Border input |
+| `cover` | `#c4c4c4` | Placeholder cover saat gambar belum ada |
+| `ink-soft` | `#2e2e2e` | Item aktif di sidebar admin, tombol Setujui |
+
+Kontras `muted` di atas `bg` sekitar 5:1, aman untuk teks kecil.
+
+### Tipografi
+
+| Peran | Font | Catatan |
+|---|---|---|
+| Judul, wordmark | Fraunces | Weight 500, wordmark italic |
+| Badan tulisan | Newsreader | 20 sampai 21px, line-height 1.7 |
+| Label UI, meta, tombol | Instrument Sans | 13 sampai 15px, label uppercase dengan letter-spacing 0.08 sampai 0.1em |
+
+Semua dari Google Fonts, dimuat lewat `next/font` supaya tidak ada layout shift.
+
+### Logo
+
+Logo sudah jadi, dibuat Yazid: siluet mulut dari samping yang terbuka, membentuk Y, dengan tulisan "cuap" di dalam mulut dan tiga garis suara. Wordmark "Yacuap" memakai sans bulat tebal. File sumber gabungan di `docs/logo.png`, aset terpisah (PNG transparan, dipotong dari sumber) di `docs/logo/`:
+
+| File | Dipakai untuk |
+|---|---|
+| `yacuap-mark.png`, `yacuap-mark-putih.png` | Simbol saja: header di HP, bar player, pojok kartu share, watermark |
+| `yacuap-wordmark.png`, `yacuap-wordmark-putih.png` | Nama saja, kalau simbol sudah ada di dekatnya |
+| `yacuap-lockup-horizontal.png` | Header desktop, footer |
+| `yacuap-lockup-vertikal.png` | Halaman Tentang, kartu share versi judul, OG image |
+| `yacuap-icon-kotak.png` | Ikon aplikasi (apple-touch-icon, PWA), avatar |
+| `yacuap-icon-bulat.png` | Avatar Instagram/TikTok |
+
+Yang masih perlu: versi vektor (SVG) supaya tajam di semua ukuran dan bisa diwarnai lewat CSS. Kalau file sumbernya ada (AI/SVG), taruh di `docs/logo/`. Kalau tidak, di Phase 0 di-trace dari PNG. Favicon 16 dan 32 px dibuat dari `yacuap-icon-kotak.png`.
+
+Catatan tipografi: wordmark logo memakai sans bulat, sementara UI memakai Fraunces dan Instrument Sans. Ini disengaja: logo tampil sebagai gambar, bukan teks, jadi tidak perlu font tambahan. Judul situs di header adalah gambar lockup, bukan teks Fraunces.
+
+### Kategori
+
+Tiga kategori tetap, dibedakan lewat gelap-terang chip, bukan warna:
+
+| Kategori | Slug | Chip |
+|---|---|---|
+| Musik | `musik` | Hitam pekat, teks putih |
+| Pikiran | `pikiran` | Abu muda, teks hitam |
+| Absurd | `absurd` | Putih, outline hitam |
+
+---
+
+## 3. Fitur dan requirement
+
+### 3.1 Tulisan (posts)
+
+- Editor ala Medium berbasis Tiptap: heading H2, tebal, miring, kutipan, tautan, gambar, embed lagu (Spotify/YouTube), pemisah.
+- Konten disimpan sebagai JSON Tiptap, dirender ke HTML di server saat dibaca.
+- Setiap tulisan punya: judul, slug (otomatis dari judul, bisa diedit), ringkasan, cover, kategori (wajib satu), tag (opsional, banyak), status draft/published, tanggal terbit, waktu baca (dihitung otomatis).
+- Satu kalimat bisa ditandai sebagai **kutipan andalan** (`pull_quote`) untuk dipakai di kartu share.
+- Autosave draft setiap beberapa detik.
+- Pratinjau sebelum terbit.
+- Halaman baca: kolom 680px, judul, subjudul, baris penulis, cover, isi, tag, tombol Suka, komentar, "Baca juga".
+- Suka (clap) anonim: satu klik per pengunjung per tulisan, disimpan di localStorage plus counter di database.
+
+### 3.2 Kategori dan tag
+
+- Kategori: tiga nilai tetap, enum di database.
+- Tag: bebas, tabel sendiri, relasi many-to-many dengan tulisan.
+- Halaman kategori `/musik`, `/pikiran`, `/absurd`, dan halaman tag `/tag/[slug]`.
+
+### 3.3 Playlist
+
+- Playlist punya: nama, slug, deskripsi, cover (monokrom), link Spotify, link YouTube Music, status draft/published.
+- Lagu di playlist: judul, artis, album, durasi, link, urutan, dan **catatan** (kenapa lagu ini masuk). Catatan opsional.
+- Playlist bisa dikaitkan ke satu tulisan ("Cerita di balik playlist ini") dan sebaliknya.
+- Beranda menampilkan satu playlist yang di-highlight ("Lagi diputar").
+
+### 3.4 Komentar anonim, langsung tampil
+
+- Form: nama (wajib), komentar (wajib), email (opsional, tidak ditampilkan), honeypot tersembunyi.
+- Komentar **langsung tampil** begitu dikirim, tanpa approval. Halaman baca di-revalidate saat itu juga.
+- Balasan satu level: pembaca bisa membalas komentar, tidak bisa membalas balasan. Penulis bisa membalas dari admin dan balasannya diberi label "Penulis".
+- Anti-spam tetap ada karena tidak ada penyaring manusia di depan: honeypot, rate limit per IP (3 komentar per 5 menit), panjang maksimal 2000 karakter, maksimal 1 tautan. Komentar yang kena rate limit otomatis disembunyikan, bukan ditolak, supaya kamu masih bisa memeriksanya.
+- Admin `/admin/komentar`: daftar terbaru, tab Semua / Disembunyikan, aksi Balas, Sembunyikan, Hapus. Badge di sidebar menunjukkan jumlah komentar baru sejak terakhir dibuka.
+
+### 3.5 Cover monokrom
+
+- Upload dari admin lewat route handler Next.js, bukan langsung ke Storage dari browser.
+- Server memproses dengan `sharp`: grayscale, sedikit tambahan kontras, resize ke beberapa ukuran, konversi ke WebP.
+- Ukuran yang dihasilkan: `cover-1600` (halaman baca), `card-800` (daftar dan kartu), `og-1200x630` (preview link), plus `share-1080` untuk kartu Instagram/TikTok.
+- File asli berwarna disimpan di bucket privat `originals`, hanya untuk cadangan. Versi monokrom di bucket publik `covers`.
+- **Semua gambar** lewat pipeline yang sama, bukan hanya cover: gambar yang disisipkan di dalam isi tulisan, artwork lagu dari YouTube, cover playlist, dan avatar. Tidak ada jalur upload yang melewati grayscale.
+
+### 3.6 Kartu bagikan (share cards)
+
+- Dibuat otomatis dari data tulisan dengan `ImageResponse` dari `next/og`, memakai palet dan font yang sama dengan website.
+- Tiga jenis kartu dikali dua rasio:
+
+| Jenis | 4:5 (1080 x 1350) Instagram | 9:16 (1080 x 1920) TikTok, IG Story |
+|---|---|---|
+| Judul | cover + kategori + judul + wordmark | sama, area atas dan bawah dikosongkan |
+| Kutipan | tanda kutip besar + `pull_quote` + judul | sama, padding kanan dan bawah lebih besar |
+| Carousel | slide 1 judul, slide tengah paragraf, slide akhir ajakan baca | sama |
+
+- Slide carousel dibuat dari paragraf yang ditandai di editor (`share_paragraphs`), maksimal 8 slide.
+- Admin: tombol "Unduh buat Instagram" dan "Unduh buat TikTok", masing-masing menghasilkan zip.
+- OG image memakai template kartu judul pada rasio 1200 x 630.
+
+### 3.7 Admin
+
+- Login hanya untuk satu akun lewat Supabase Auth (email + password, atau magic link).
+- Menu: Tulisan, Playlist, Komentar (dengan badge komentar baru), Keluar.
+- Semua halaman admin di bawah `/admin`, dilindungi middleware.
+
+### 3.9 Pemutar musik di dalam cerita
+
+Tulisan bisa punya lagu yang diputar sambil dibaca. Sumber audionya YouTube, videonya tidak ditampilkan, kontrolnya tombol sendiri yang monokrom.
+
+Keputusan ini diambil dengan sadar: menyembunyikan player YouTube melanggar syarat layanan API YouTube (player wajib terlihat minimal 200 x 200 px dan audio tidak boleh dipisah dari video). Risiko untuk website pribadi kecil, tapi ada. Lihat bagian 9.
+
+Cara kerja:
+
+- Satu instance YouTube IFrame Player dibuat sekali di root layout, ditaruh di luar layar (posisi fixed, 1 x 1 px, opacity 0). Jangan pakai `display: none`, player tidak jalan. Parameter `playsinline=1` wajib supaya iOS tidak membuka player layar penuh.
+- Semua kontrol lewat IFrame API resmi: `playVideo`, `pauseVideo`, `seekTo`, `getCurrentTime`, `getDuration`. Progress di-poll tiap 500 ms saat sedang diputar.
+- Pemutaran hanya dimulai dari klik pengguna (browser melarang autoplay). Tombolnya "Putar sambil baca".
+- Hanya satu lagu yang diputar pada satu waktu. Memutar lagu lain mengganti yang sedang jalan.
+
+Dua titik masuk:
+
+1. **Lagu pengiring tulisan.** Satu lagu ditempel ke tulisan dari admin. Di halaman baca, di bawah baris penulis, ada tombol "Putar sambil baca" dengan judul dan artis. Diklik, muncul **bar player** di bawah layar: play/pause, judul, artis, garis progress, waktu, tombol tutup. Bar hidup di layout, jadi lagu tetap jalan saat scroll atau pindah halaman.
+2. **Kartu lagu di dalam tulisan.** Node Tiptap `trackCard` menampilkan artwork monokrom, judul, artis, dan tombol play/pause yang mengirim lagu ke bar player yang sama. Dipakai juga di halaman playlist, tiap lagu punya tombol play.
+
+Menambah lagu di admin: tempel URL YouTube, server mengambil judul dan thumbnail lewat oEmbed (tanpa API key), thumbnail lewat pipeline grayscale, artis dan judul bisa diedit manual karena judul video YouTube sering berantakan.
+
+Yang harus ditangani:
+
+- Video yang tidak boleh di-embed (error 101 / 150): bar menampilkan "Nggak bisa diputar di sini" dengan tautan ke YouTube.
+- Iklan: YouTube bisa memutar iklan di player embed. Karena player tersembunyi, pembaca bisa mendengar audio iklan tanpa melihatnya. Tampilkan status "iklan" di bar kalau state player menunjukkan itu, atau minimal jangan tampilkan progress yang loncat.
+- HP: iOS Safari dan Chrome Android menjeda iframe saat tab pindah ke belakang atau layar mati. Ini tidak bisa diakali dari sisi website. Bar player cukup menampilkan tombol play lagi.
+- Skrip IFrame API dimuat malas, hanya saat pengguna pertama kali menekan play, supaya halaman baca tetap ringan.
+
+### 3.8 SEO dan lain-lain
+
+- Metadata per halaman, OG image otomatis, sitemap, RSS.
+- Halaman Tentang sederhana.
+- Rendering: halaman publik statis dengan revalidasi saat ada perubahan (ISR + `revalidatePath` dari admin).
+
+---
+
+## 4. Arsitektur dan stack
+
+| Lapisan | Pilihan | Alasan |
+|---|---|---|
+| Framework | Next.js 16 (selalu versi terbaru), App Router, TypeScript, Turbopack | Server Components untuk halaman baca yang cepat, route handler untuk upload dan gambar |
+| Styling | Tailwind CSS v4 | Token warna sebagai CSS variables, cepat dikerjakan |
+| Database | Supabase Postgres | Relasional, RLS, cukup satu proyek |
+| Auth | Supabase Auth | Satu akun admin |
+| Storage | Supabase Storage | Bucket `covers` publik, `originals` privat |
+| Editor | Tiptap | Rasa Medium, output JSON, mudah diperluas (embed lagu) |
+| Gambar | sharp | Grayscale, resize, WebP di server |
+| Share cards | `next/og` (Satori) | Render komponen jadi PNG di server |
+| Zip | `fflate` atau `jszip` | Bundel kartu share |
+| Deploy | Vercel | Cocok dengan Next.js, sharp tersedia |
+
+Struktur folder yang direncanakan:
+
+```
+app/
+  (public)/
+    page.tsx                  beranda
+    [kategori]/page.tsx       musik, pikiran, absurd
+    cerita/[slug]/page.tsx    halaman baca
+    playlist/page.tsx
+    playlist/[slug]/page.tsx
+    tag/[slug]/page.tsx
+    tentang/page.tsx
+  admin/
+    layout.tsx                sidebar + proteksi
+    tulisan/...
+    playlist/...
+    komentar/page.tsx
+  api/
+    upload/route.ts           pipeline cover monokrom
+    komentar/route.ts         insert komentar + rate limit
+    share/[slug]/route.ts     kartu share (query: jenis, rasio, slide)
+    og/[slug]/route.ts        OG image
+components/
+lib/
+  supabase/                   client server, client browser, tipe
+  tiptap/                     ekstensi dan renderer
+  image/                      pipeline sharp
+  share/                      template kartu
+supabase/
+  migrations/
+docs/
+  PRD.md
+```
+
+---
+
+## 5. Model data
+
+```mermaid
+erDiagram
+  posts ||--o{ post_tags : has
+  tags ||--o{ post_tags : has
+  posts ||--o{ comments : has
+  comments ||--o{ comments : replies
+  posts ||--o{ playlists : "story of"
+  playlists ||--o{ playlist_tracks : has
+  tracks ||--o{ playlist_tracks : has
+  tracks ||--o{ posts : "soundtrack of"
+  posts ||--o{ post_likes : has
+```
+
+### posts
+
+| Kolom | Tipe | Catatan |
+|---|---|---|
+| id | uuid pk | |
+| title | text | |
+| slug | text unique | |
+| excerpt | text | |
+| content | jsonb | dokumen Tiptap |
+| content_html | text | hasil render, cache |
+| cover_path | text | path di bucket `covers`, tanpa ukuran |
+| category | enum `musik` `pikiran` `absurd` | |
+| status | enum `draft` `published` | |
+| published_at | timestamptz | null saat draft |
+| reading_time | int | menit, dihitung saat simpan |
+| pull_quote | text | kalimat untuk kartu kutipan |
+| share_paragraphs | jsonb | array teks untuk carousel |
+| like_count | int default 0 | |
+| created_at, updated_at | timestamptz | |
+
+### tags, post_tags
+
+- `tags(id, name, slug unique)`
+- `post_tags(post_id, tag_id)` primary key gabungan
+
+### playlists
+
+| Kolom | Tipe | Catatan |
+|---|---|---|
+| id | uuid pk | |
+| name, slug unique, description | text | |
+| cover_path | text | |
+| spotify_url, youtube_url | text | opsional |
+| post_id | uuid fk posts | opsional, cerita di balik playlist |
+| status | enum draft/published | |
+| is_featured | bool | yang tampil di beranda |
+| created_at, updated_at | timestamptz | |
+
+### playlist_tracks
+
+| Kolom | Tipe | Catatan |
+|---|---|---|
+| playlist_id | uuid fk playlists | pk gabungan |
+| track_id | uuid fk tracks | pk gabungan |
+| note | text | kenapa lagu ini masuk |
+| position | int | |
+
+### tracks
+
+Dipakai bersama oleh lagu pengiring tulisan, kartu lagu di dalam tulisan, dan playlist.
+
+| Kolom | Tipe | Catatan |
+|---|---|---|
+| id | uuid pk | |
+| title, artist, album | text | bisa diedit manual setelah oEmbed |
+| youtube_id | text unique | 11 karakter |
+| duration_seconds | int | dari IFrame API saat pertama diputar, atau diisi manual |
+| artwork_path | text | thumbnail YouTube yang sudah digrayscale, bucket `covers` |
+| spotify_url | text | opsional, tautan "Dengar di Spotify" |
+| created_at | timestamptz | |
+
+`posts` mendapat kolom `soundtrack_track_id uuid fk tracks` (opsional). Node `trackCard` di dalam konten Tiptap menyimpan `track_id`. `playlist_tracks` menjadi tabel penghubung: `playlist_id`, `track_id`, `position`, `note`; kolom judul, artis, album, durasi, url pindah ke `tracks`.
+
+### comments
+
+| Kolom | Tipe | Catatan |
+|---|---|---|
+| id | uuid pk | |
+| post_id | uuid fk | |
+| parent_id | uuid fk comments | null untuk komentar utama |
+| author_name | text | |
+| author_email | text | opsional, tidak pernah dikirim ke klien publik |
+| body | text | |
+| status | enum `visible` `hidden` | default visible; `hidden` untuk yang disembunyikan admin atau kena rate limit |
+| is_author | bool | true untuk balasan Yazid |
+| ip_hash | text | untuk rate limit, bukan IP mentah |
+| created_at | timestamptz | |
+
+### post_likes
+
+- `post_likes(post_id, visitor_id, created_at)`, `visitor_id` dari cookie acak. Cukup untuk mencegah dobel sederhana.
+
+### Row Level Security
+
+| Tabel | Publik (anon) | Admin (authenticated) |
+|---|---|---|
+| posts | select where status = published | semua |
+| tags, post_tags | select | semua |
+| playlists, playlist_tracks | select where playlist published | semua |
+| tracks | select | semua |
+| comments | select where visible; insert hanya lewat route handler | semua |
+| post_likes | insert | semua |
+
+Insert komentar dan like tetap lewat route handler (bukan langsung dari browser ke Supabase) supaya rate limit dan honeypot jalan di server.
+
+### Storage
+
+| Bucket | Akses | Isi |
+|---|---|---|
+| `covers` | publik, baca | `{postId}/cover-1600.webp`, `card-800.webp`, `og.webp`, `share-1080.webp`; juga gambar isi tulisan |
+| `originals` | privat | file asli berwarna, nama sama |
+
+---
+
+## 6. Flow
+
+### 6.1 Pembaca membaca tulisan
+
+```mermaid
+flowchart LR
+  A[Beranda / kategori / tag] --> B[Klik tulisan]
+  B --> C[/cerita/slug, statis + ISR/]
+  C --> D{Selesai baca}
+  D --> E[Suka]
+  D --> F[Tulis komentar]
+  D --> G[Baca juga / playlist terkait]
+```
+
+### 6.2 Komentar
+
+```mermaid
+sequenceDiagram
+  participant P as Pembaca
+  participant R as /api/komentar
+  participant DB as Supabase
+  participant Y as Yazid (admin)
+  P->>R: nama, isi, honeypot kosong
+  R->>R: cek honeypot, panjang, jumlah tautan, rate limit per ip_hash
+  alt lolos
+    R->>DB: insert comments (status visible)
+    R-->>P: komentar langsung tampil (revalidate halaman)
+  else kena rate limit
+    R->>DB: insert comments (status hidden)
+    R-->>P: "Terlalu cepat, coba lagi sebentar"
+  end
+  Y->>DB: buka /admin/komentar kapan saja
+  Y->>DB: Balas / Sembunyikan / Hapus
+```
+
+### 6.3 Menulis dan menerbitkan
+
+```mermaid
+flowchart TD
+  A[Login /admin] --> B[Tulisan baru]
+  B --> C[Ketik di editor Tiptap]
+  C --> D[Autosave draft tiap beberapa detik]
+  C --> E[Isi panel kanan: kategori, tag, cover, slug, ringkasan]
+  C --> F[Tandai pull quote dan paragraf untuk carousel]
+  E --> G[Pratinjau]
+  G --> H{Oke?}
+  H -- belum --> C
+  H -- ya --> I[Terbitkan]
+  I --> J[status published, published_at, reading_time, content_html]
+  J --> K[revalidatePath beranda, kategori, /cerita/slug, sitemap, RSS]
+```
+
+### 6.4 Upload cover monokrom
+
+```mermaid
+sequenceDiagram
+  participant Y as Admin
+  participant U as /api/upload
+  participant S as sharp
+  participant ST as Supabase Storage
+  Y->>U: file gambar (berwarna)
+  U->>ST: simpan asli ke bucket originals (privat)
+  U->>S: grayscale + kontras ringan
+  S->>S: resize 1600, 800, 1200x630, 1080 → WebP
+  S->>ST: simpan ke bucket covers (publik)
+  U-->>Y: cover_path + URL preview
+```
+
+### 6.5 Kartu bagikan
+
+```mermaid
+flowchart LR
+  A[Admin: tulisan terbit] --> B[Unduh buat Instagram]
+  A --> C[Unduh buat TikTok]
+  B --> D[/api/share/slug?rasio=4x5 untuk judul, kutipan, tiap slide/]
+  C --> E[/api/share/slug?rasio=9x16 untuk judul, kutipan, tiap slide/]
+  D --> F[zip: judul.png, kutipan.png, carousel-01..n.png]
+  E --> F
+  F --> G[Rakit di Instagram / TikTok / CapCut]
+```
+
+### 6.6 Playlist
+
+```mermaid
+flowchart TD
+  A[Admin: playlist baru] --> B[Nama, deskripsi, cover, link Spotify/YouTube]
+  B --> C[Tambah lagu satu per satu, catatan opsional, urutkan]
+  C --> D[Kaitkan ke tulisan, opsional]
+  D --> E[Terbitkan, opsional jadikan featured]
+  E --> F[/playlist/slug dan kartu Lagi diputar di beranda]
+```
+
+### 6.7 Pemutar musik
+
+```mermaid
+sequenceDiagram
+  participant P as Pembaca
+  participant B as Bar player (layout)
+  participant YT as YouTube IFrame (tersembunyi)
+  P->>B: klik "Putar sambil baca" atau play di kartu lagu
+  B->>B: muat skrip IFrame API kalau belum
+  B->>YT: loadVideoById(youtube_id), playVideo()
+  YT-->>B: onStateChange playing
+  B-->>P: bar muncul: judul, artis, progress, pause
+  loop tiap 500 ms
+    B->>YT: getCurrentTime()
+  end
+  P->>B: pause / play / tutup
+  B->>YT: pauseVideo() / playVideo() / stopVideo()
+  YT-->>B: onError 101/150
+  B-->>P: "Nggak bisa diputar di sini, buka di YouTube"
+```
+
+---
+
+## 7. Pembagian phase
+
+Tiap phase menghasilkan sesuatu yang bisa dilihat dan dipakai. Urutannya dibuat supaya kamu bisa mulai menulis sedini mungkin.
+
+### Phase 0. Fondasi
+
+Target: proyek jalan lokal, terhubung ke Supabase, sistem desain terpasang.
+
+- Init Next.js + TypeScript + Tailwind, `next/font` untuk Fraunces, Newsreader, Instrument Sans.
+- Token warna sebagai CSS variables, komponen dasar: tombol, chip, input, kartu, layout kolom 680.
+- Proyek Supabase, env, client server dan browser, tipe hasil generate.
+- Migration awal: enum, tabel `posts`, `tags`, `post_tags`, RLS, bucket `covers` dan `originals`.
+- Auth admin: satu akun, middleware proteksi `/admin`, halaman login, keluar.
+
+Selesai kalau: bisa login ke `/admin` kosong, halaman publik menampilkan layout dan font yang benar.
+
+### Phase 1. Menulis dan membaca
+
+Target: bisa menulis, menerbitkan, dan membaca tulisan dari awal sampai akhir.
+
+- Editor Tiptap dengan toolbar mengambang, autosave, slug otomatis, waktu baca.
+- Panel kanan: kategori, tag, slug, ringkasan (cover menyusul di phase 3, sementara pakai placeholder).
+- Pratinjau dan Terbitkan, `revalidatePath`.
+- Halaman baca `/cerita/[slug]` sesuai mockup, renderer JSON ke HTML.
+- Beranda, halaman kategori, halaman tag.
+- Suka anonim.
+- Daftar tulisan di admin: filter draft/published, edit, hapus.
+
+Selesai kalau: satu tulisan asli bisa diterbitkan dan dibaca di HP dan desktop.
+
+### Phase 2. Playlist
+
+Target: playlist dengan catatan per lagu, tampil di beranda dan halaman sendiri.
+
+- Migration `tracks`, `playlists`, `playlist_tracks`, kolom `soundtrack_track_id` di `posts`, RLS.
+- Admin: tambah lagu dari URL YouTube (oEmbed, thumbnail grayscale), edit judul dan artis.
+- Pemutar musik: YouTube IFrame tersembunyi di root layout, bar player di bawah layar, tombol "Putar sambil baca", node `trackCard` di editor dengan play/pause.
+- Admin: CRUD playlist, tambah dan urutkan lagu (drag), catatan per lagu, kaitkan ke tulisan, featured.
+- Halaman `/playlist` dan `/playlist/[slug]`.
+- Kartu "Lagi diputar" di beranda, kartu "Cerita di balik playlist ini".
+- Embed lagu di dalam tulisan (Tiptap node untuk Spotify/YouTube).
+
+Selesai kalau: satu playlist asli terbit, dan satu tulisan bisa diputar lagunya sambil dibaca, di desktop dan HP.
+
+### Phase 3. Cover monokrom dan gambar
+
+Target: semua gambar lewat pipeline grayscale.
+
+- Route `/api/upload` dengan sharp: grayscale, kontras, resize, WebP, simpan asli ke `originals`.
+- Komponen upload cover di panel kanan editor, dengan preview.
+- **Semua gambar** lewat pipeline yang sama, bukan hanya cover: gambar yang disisipkan di dalam isi tulisan, artwork lagu dari YouTube, cover playlist, dan avatar. Tidak ada jalur upload yang melewati grayscale.
+- Komponen `<Cover>` yang memilih ukuran sesuai konteks.
+- OG image dasar dari `og.webp`.
+
+Selesai kalau: upload foto berwarna, hasil di website dan di preview link WhatsApp sama-sama monokrom.
+
+### Phase 4. Komentar
+
+Target: pembaca bisa komentar tanpa akun dan langsung tampil, kamu tetap bisa membersihkan.
+
+- Migration `comments`, RLS.
+- Form komentar di halaman baca, honeypot, rate limit, batas panjang dan tautan di `/api/komentar`.
+- Daftar komentar dengan balasan satu level, label "Penulis".
+- Admin `/admin/komentar`: daftar terbaru, tab Semua / Disembunyikan, aksi Balas / Sembunyikan / Hapus, badge komentar baru di sidebar.
+
+Selesai kalau: komentar dari HP orang lain langsung tampil, dan bisa disembunyikan dari admin.
+
+### Phase 5. Kartu bagikan
+
+Target: enam output gambar per tulisan, tinggal unduh.
+
+- Di editor: tandai `pull_quote` dan `share_paragraphs`.
+- Template `next/og`: judul, kutipan, carousel, masing-masing untuk 4:5 dan 9:16, sesuai mockup.
+- Route `/api/share/[slug]` dengan parameter jenis, rasio, nomor slide.
+- Tombol "Unduh buat Instagram" dan "Unduh buat TikTok" yang menghasilkan zip.
+- OG image dipindah ke template kartu judul 1200 x 630.
+
+Selesai kalau: zip terunduh, dibuka di HP, dan langsung bisa diunggah tanpa diedit.
+
+### Phase 6. Poles dan rilis
+
+- Halaman Tentang, sitemap, RSS, metadata lengkap, 404.
+- Aksesibilitas: fokus keyboard, kontras, alt text cover (dari judul).
+- Performa: cek Lighthouse halaman baca, target skor 90 ke atas.
+- Deploy ke Vercel, domain, env produksi, backup database otomatis dari Supabase.
+
+Selesai kalau: domain hidup, satu tulisan dan satu playlist terbit di produksi.
+
+---
+
+## 8. Keputusan yang sudah diambil
+
+| Topik | Keputusan |
+|---|---|
+| Tema | Monokrom abu, tanpa aksen warna |
+| Cover | Diubah grayscale di server saat upload, asli disimpan privat |
+| Komentar | Anonim, langsung tampil tanpa approval, satu level balasan, admin bisa sembunyikan atau hapus |
+| Playlist | Manual di database sendiri, link Spotify/YouTube opsional |
+| Share cards | Dibuat otomatis, 3 jenis x 2 rasio, unduh zip |
+| Konten Instagram/TikTok | Gambar diam saja, video dirakit manual |
+| Musik di cerita | Sumber YouTube, video disembunyikan, kontrol sendiri lewat IFrame API |
+| Nama | Yacuap, tagline "Cuap-cuap Yazid Syafiq Irsyad. Boleh didengar, boleh diabaikan." Folder repo tetap `Celotehan` |
+| Bahasa UI | Indonesia |
+
+## 9. Masih terbuka dan risiko yang diterima
+
+- **Player YouTube tersembunyi melanggar syarat layanan API YouTube.** Diterima secara sadar untuk website pribadi. Kalau suatu saat embed diblokir, cadangannya adalah preview 30 detik dari iTunes Search API dengan player yang sama (kolom `source` bisa ditambah ke `tracks`).
+- **Audio berhenti di HP saat layar mati.** Batasan browser, tidak bisa diakali.
+- **Audio iklan bisa terdengar tanpa terlihat.** Ditangani lewat status di bar player.
+
+- Nama domain (kandidat: yacuap.id, yacuap.com).
+- Perlu analytics atau tidak (kalau ya, sarannya yang tanpa cookie seperti Plausible atau Umami).
+- Apakah "Suka" ditampilkan angkanya ke publik atau hanya ke admin.
+
+---
+
+## 10. Konvensi kerja
+
+### Git dan GitHub
+
+- Semua commit dan pull request atas nama identitas git Yazid saja (`Yazid Syafiq Irsyad`, `irsyadyazidsyafiq@gmail.com`). Tidak ada trailer `Co-Authored-By` atau catatan "generated with" dari asisten mana pun.
+- Branch utama `main`. Kerja per phase di branch `phase-N-nama`, digabung ke `main` lewat PR atau merge lokal.
+- Pesan commit bahasa Indonesia, singkat, kalimat perintah: "tambah pipeline cover monokrom".
+- File rahasia (`.env.local`, kunci service role) tidak pernah masuk repo. `.env.example` berisi nama variabel saja.
+
+### Deploy
+
+- Sementara di Vercel, project dihubungkan ke repo GitHub, deploy otomatis dari `main`, preview dari PR.
+- Domain sendiri menyusul. Semua URL absolut (OG image, sitemap, RSS, kartu share) dibaca dari satu variabel `NEXT_PUBLIC_SITE_URL`, jadi pindah domain cukup ganti satu env.
+- Supabase: **satu project untuk pengembangan dan produksi**, keputusan 30 September 2026. URL dan publishable key sama di laptop dan di Vercel. Konsekuensinya: perubahan data dari laptop langsung tampil di situs, dan `npm run db:push` langsung mengubah database produksi. Migration yang sudah di-push tidak boleh diedit, selalu buat file baru.
+
+---
+
+## 11. Status pengerjaan
+
+### Phase 0, selesai 30 September 2026
+
+Yang sudah ada:
+
+- Next.js 16.3.7, React 19.2, Tailwind CSS 4, TypeScript, ESLint. Nama paket `yacuap`.
+- Token warna monokrom dan tiga font (Fraunces, Newsreader, Instrument Sans) lewat `next/font`.
+- Komponen dasar: tombol, chip kategori, input, kartu, kolom baca 680px, logo, header, footer.
+- Halaman publik dengan keadaan kosong: beranda, `/musik` `/pikiran` `/absurd`, `/playlist`, `/tentang`, 404.
+- Logo asli terpasang di header, halaman login, halaman Tentang, favicon, ikon aplikasi, dan OG image bawaan.
+- Klien Supabase (browser, server ber-cookie, publik tanpa cookie), `proxy.ts` yang menjaga `/admin`, login, keluar, panel admin dengan sidebar.
+- Migration `supabase/migrations/20260930000000_fondasi.sql`: tabel `admins`, `posts`, `tags`, `post_tags`, RLS, bucket `covers` dan `originals`.
+
+Yang belum bisa dicek di mesin ini:
+
+- Migration belum pernah dijalankan ke database sungguhan. Docker tidak tersedia, jadi Supabase lokal tidak bisa dinyalakan. Jalankan `npm run db:push` ke project Supabase, dan kalau ada galat SQL, perbaiki di file migration itu.
+- Login admin belum diuji dari awal sampai akhir karena belum ada project Supabase. Yang sudah diuji: `/admin` dan anak-anaknya mengalihkan ke `/admin/login` saat belum masuk.
+
+### Catatan teknis Next.js 16
+
+- `middleware.ts` sudah diganti `proxy.ts` dengan fungsi `proxy`. Proxy hanya pengecekan awal; otorisasi sebenarnya ada di `requireAdmin()` yang dipanggil layout admin dan wajib dipanggil di tiap Server Action admin.
+- Supabase sekarang memakai publishable key (`NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`), bukan anon key.
+- Cache Components (`cacheComponents`) sengaja tidak dinyalakan. Halaman publik memakai model lama: halaman statis, di-revalidate dengan `revalidatePath` saat admin menerbitkan. Lebih sederhana untuk blog satu penulis, dan bisa dipindah nanti.
+- `params` dan `searchParams` adalah Promise; tipe halaman memakai `PageProps<"/rute">` dan `LayoutProps<"/rute">` hasil `next typegen`.
+- Sebelum menulis kode Next.js, baca panduan di `node_modules/next/dist/docs/` sesuai AGENTS.md.
+
+### Tabel admin
+
+Tabel `admins` tidak ada di rancangan awal bagian 5. Ditambahkan supaya punya akun Auth saja tidak cukup untuk menulis: semua kebijakan RLS admin memakai fungsi `is_admin()`, bukan sekadar peran `authenticated`.
+
+### Hero beranda, 30 September 2026
+
+- Hero selalu setinggi layar dikurangi header di perangkat apa pun (`100svh - var(--header-h)`). Header dibuat satu baris dengan tinggi tetap supaya hitungannya pasti; di HP logonya simbol saja.
+- Kerumunan berjalan di bagian bawah hero: `components/ui/crowd-canvas.tsx`, diadaptasi dari Skiper UI (atribusi wajib, ada di halaman Tentang) dengan ilustrasi Open Peeps (CC0).
+- Sosoknya seluruh badan dengan kaki. Sprite dibuat oleh `node scripts/buat-sprite-kerumunan.cjs` dari pose berdiri Open Peeps lewat `react-peeps`, hasilnya `public/hero/kerumunan.png` (84 sosok). Kaki tidak digerakkan per frame: kesan berjalan datang dari pose melangkah, badan yang naik turun, dan olengan kiri kanan seirama langkah.
+- Sosok pertama di sprite adalah tuan rumah, "saya": diam di depan kerumunan dengan balon berisi logo. Tampangnya diatur di `HOST` dalam skrip sprite.
+- Ukuran sosok, balon, dan logo mengikuti lebar layar: tinggi sosok = 110px + 13% lebar layar, dijepit 130 sampai 460px, dan dikecilkan kalau tinggi area tidak cukup. Kira-kira 160px di HP, 275px di laptop, 360px di monitor full HD.
+- Keramaian: kira-kira satu orang tiap 4% tinggi badan di seluruh lebar layar (sekitar 50 orang di HP, 100 di laptop, 115 di full HD), setara versi setengah badan yang pertama. Diatur lewat prop `density`.
+- Balon celetukan berbaris di jalur tetap di atas kerumunan: yang berjalan ke kanan di jalur bawah, yang ke kiri di jalur atas. Balon yang berebut tempat memudar, tidak pernah saling tumpuk, dan tidak menabrak balon tuan rumah.
+- Sebagian orang membawa balon. Isinya celotehan penulis, di beranda maupun di halaman kategori.
+
+Yang menyusul:
+
+- Phase 1: sebagian balon menampilkan judul tulisan terbaru dan bisa diklik.
+- Phase 2: saat pemutar musik jalan, irama langkah kerumunan mengikuti tempo lagu.
+
+### Mode terang dan gelap, 30 September 2026
+
+- Tema diatur atribut `data-theme` di `<html>`. Skrip kecil di `<head>` memasangnya sebelum halaman digambar: pilihan tersimpan di `localStorage` kalau ada, kalau tidak mengikuti pengaturan sistem. Tidak ada kedipan warna, halaman tetap statis.
+- Token gelap di `app/globals.css`: latar `#121212`, permukaan `#1c1c1c`, tinta `#ededed`, meta `#a0a0a0`, garis `#2c2c2c`. Tetap monokrom.
+- Tombol ganti tema (`components/site/theme-toggle.tsx`) ada di header dan di sidebar admin.
+- Logo dibalik warnanya di mode gelap lewat kelas `.theme-invert`. Kerumunan tidak dibalik: mode gelap memakai sprite sendiri, `public/hero/kerumunan-gelap.png`, orang yang sama dengan garis tepi terang, dan balon terang bertulisan gelap.
+- Kelas Tailwind `dark:` mengikuti `data-theme`, bukan pengaturan sistem langsung.
+
+### Celotehan, 30 September 2026
+
+Jenis konten baru di samping cerita: tulisan sebaris, misalnya "YaAllah pengen 1M".
+
+- Tabel `celotehan` (`body` maksimal 140 karakter, `status`, `created_at`), migration `20260930010000_celotehan.sql`, RLS: publik membaca yang terbit, admin mengelola.
+- Balon di atas kerumunan beranda sekarang berisi celotehan, diambil lewat `lib/celotehan.ts`. Selama tabel kosong atau Supabase belum tersambung, dipakai daftar contoh sementara di file itu.
+- Yang menyusul di Phase 1: form tambah dan hapus celotehan di admin, dan halaman atau bagian khusus yang menampilkan semua celotehan.
+- Situs ini tempat menuangkan apa saja dalam tulisan. Tiga kategori tetap ada sebagai rak, tapi copy tidak boleh membatasi isi situs ke tiga topik itu.
+
+### Gaya bahasa
+
+Copy di seluruh halaman publik mengikuti gaya hero: santai dan akrab seperti ngobrol, kalimat pendek, pakai "aja", "nggak", "nih", "dong", "dengerin". Tidak resmi, dan tidak banyak "saya"; lebih sering bentuk pasif santai seperti "ditulis di sini". Tagline situs: "Yazid cuap-cuap". Penutup: "Boleh didengerin, boleh dicuekin."
+
+### Hero, tata letak dan copy baru
+
+- Teks di tengah: sapaan "Hai, selamat mampir", judul "Sini, saya mau cerita.", satu kalimat penjelas, dan dua tombol: "Baru kelar nulis, baca dong" dan "Lagi sering muter ini, nih". Hanya satu yang memakai ", nih". Tombol kedua mengajak ke playlist yang sedang sering diputar; di Phase 2 tujuannya langsung ke playlist yang ditandai sedang diputar. Karakter "saya" berdiri di tengah kerumunan.
+- Copy hero tidak menyebut nama, hanya kata ganti orang pertama.
+- Judul satu baris di layar lebar supaya area kerumunan lebih tinggi dan sosoknya bisa lebih besar.
+
+### Lebar tata letak
+
+Lebar maksimum situs 1408px (`--container-site: 88rem`) dengan padding samping 16px di HP, 24px di tablet, 32px di layar lebar. Jarak atas-bawah antarbagian 40px. Kolom baca tetap 680px.
+
+### Logo di header
+
+Logo kotak 52px, 44px di HP, dengan proporsi yang sama seperti balon tuan rumah di kerumunan (jarak simbol ke tepi 32% tinggi simbol, sudut 30% tinggi kotak), di sebelahnya wordmark "Yacuap" dengan keterangan kecil "Yazid cuap-cuap" di bawahnya. Di HP hanya logo kotaknya yang tampil, supaya menu dan tombol tema tetap muat satu baris.
+Menu di header dan keterangan di bawah wordmark memakai Fraunces, huruf yang sama dengan judul hero. Keterangannya miring.
+
+### Menu utama
+
+Menu: "Tulisan", "Ocehan", "Playlist", "Oknumnya". Keempatnya menggulir ke bagian di beranda (`/#tulisan`, `/#ocehan`, `/#playlist`, `/#oknumnya`), bukan membuka halaman lain. Header menempel di atas saat menggulir. Halaman `/cerita`, `/celotehan`, `/playlist`, dan `/tentang` tetap ada sebagai tujuan tautan "Lihat semua, dong" di tiap bagian. Musik, Pikiran, dan Absurd tidak lagi di menu; ketiganya jadi rak di halaman `/cerita` dan tetap punya halaman sendiri (`/musik`, `/pikiran`, `/absurd`). Di HP "Tentang" hanya ada di footer supaya menu muat satu baris.
+
+- `/cerita`: semua tulisan panjang, dengan pilihan rak di atasnya.
+- `/celotehan`: semua tulisan sebaris, sumber yang sama dengan balon di beranda.

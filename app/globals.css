@@ -1,0 +1,106 @@
+@import "tailwindcss";
+
+/* `dark:` mengikuti atribut data-theme di <html>, bukan pengaturan sistem langsung. */
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+
+/* Token desain Yacuap: monokrom, tanpa warna aksen. Lihat docs/PRD.md bagian 2. */
+:root {
+  color-scheme: light;
+  --bg: #f4f4f4;
+  --surface: #ffffff;
+  --ink: #111111;
+  --ink-soft: #2e2e2e;
+  --muted: #6a6a6a;
+  --line: #dcdcdc;
+  --border-strong: #c9c9c9;
+  --cover: #c4c4c4;
+
+  /* tinggi header tetap; dipakai hero untuk mengisi sisa layar */
+  --header-h: 4rem;
+}
+
+@media (min-width: 40rem) {
+  :root {
+    --header-h: 5rem;
+  }
+}
+
+/* Mode gelap: kertas jadi hampir hitam, tinta jadi hampir putih. Tetap tanpa warna. */
+[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #121212;
+  --surface: #1c1c1c;
+  --ink: #ededed;
+  --ink-soft: #cfcfcf;
+  --muted: #a0a0a0;
+  --line: #2c2c2c;
+  --border-strong: #444444;
+  --cover: #3a3a3a;
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-ink: var(--ink);
+  --color-ink-soft: var(--ink-soft);
+  --color-muted: var(--muted);
+  --color-line: var(--line);
+  --color-border-strong: var(--border-strong);
+  --color-cover: var(--cover);
+
+  --font-display: var(--font-fraunces), Georgia, "Times New Roman", serif;
+  --font-body: var(--font-newsreader), Georgia, "Times New Roman", serif;
+  --font-ui: var(--font-instrument-sans), system-ui, -apple-system, sans-serif;
+
+  /* lebar kolom baca ala Medium */
+  --container-read: 42.5rem;
+  --container-site: 88rem;
+}
+
+html {
+  background: var(--bg);
+  scroll-behavior: smooth;
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: 1.125rem;
+  line-height: 1.6;
+}
+
+/* Bagian yang dituju menu: berhenti tepat di bawah header yang menempel, tidak tertutup olehnya. */
+.section-anchor {
+  scroll-margin-top: var(--header-h);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+}
+
+::selection {
+  background: var(--ink);
+  color: var(--bg);
+}
+
+:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
+}
+
+/*
+ * Gambar hitam-putih yang harus ikut tema: logo dan canvas kerumunan.
+ * Di mode gelap warnanya dibalik, hitam jadi putih dan sebaliknya.
+ */
+[data-theme="dark"] .theme-invert {
+  filter: invert(1);
+}
+
+/* semua gambar konten tampil monokrom, sebagai pengaman kalau ada yang lolos pipeline */
+.mono-img {
+  filter: grayscale(1);
+}
