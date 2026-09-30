@@ -10,6 +10,7 @@ import { signOut } from "../actions";
 const items = [
   { href: "/admin", label: "Ringkasan", exact: true },
   { href: "/admin/tulisan", label: "Tulisan" },
+  { href: "/admin/tag", label: "Tag" },
   { href: "/admin/playlist", label: "Playlist" },
   { href: "/admin/komentar", label: "Komentar" },
 ];

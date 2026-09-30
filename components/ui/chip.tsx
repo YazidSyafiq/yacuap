@@ -1,23 +1,25 @@
-import { categories, type Category } from "@/lib/categories";
 import { cn } from "@/lib/cn";
 
-/** Kategori dibedakan lewat gelap-terang, bukan warna. */
-const tone: Record<Category, string> = {
-  musik: "bg-ink text-surface border-ink",
-  pikiran: "bg-line text-ink border-line",
-  absurd: "bg-surface text-ink border-ink",
-};
+/**
+ * Tag dibedakan lewat gelap-terang, bukan warna: gelap, abu, lalu bergaris, berulang sesuai urutan tag.
+ * Jadi tag yang baru ditambahkan dari admin otomatis dapat gaya tanpa perlu diatur.
+ */
+const TONES = [
+  "bg-ink text-surface border-ink",
+  "bg-line text-ink border-line",
+  "bg-surface text-ink border-ink",
+];
 
-export function CategoryChip({ category, className }: { category: Category; className?: string }) {
+export function TagChip({ tag, className }: { tag: { name: string; position: number }; className?: string }) {
   return (
     <span
       className={cn(
         "inline-flex items-center rounded-full border px-3 py-1 font-ui text-[11px] font-semibold uppercase tracking-[0.08em]",
-        tone[category],
+        TONES[Math.abs(tag.position) % TONES.length],
         className,
       )}
     >
-      {categories[category].label}
+      {tag.name}
     </span>
   );
 }

@@ -778,3 +778,27 @@ Akun admin belum ada: akun dibuat di dasbor Supabase (Authentication, Users), la
 ### Footer hanya di beranda
 
 Footer hanya tampil di beranda. Halaman lain (daftar lagu `/playlist`, rak tulisan, dan nanti halaman baca) tidak memakai footer: isinya header, isi halaman, dan bar pemutar kalau ada lagu yang jalan. Susunannya: `app/(public)/layout.tsx` berisi header dan bar pemutar, `app/(public)/(beranda)/layout.tsx` menambahkan footer, `app/(public)/(halaman)/layout.tsx` tanpa footer.
+
+### Tag dinamis dan tampilan tulisan, 30 September 2026
+
+Keputusan: kategori tetap (Musik, Pikiran, Absurd) dilebur jadi **tag yang bisa ditambah kapan saja** dari admin. Ini menggantikan bagian 3.2: tidak ada lagi enum kategori, dan tidak ada halaman `/tag/[slug]` terpisah.
+
+- Database (`supabase/migrations/20260930040000_tag_dinamis.sql`): kolom `posts.category` dan enum `post_category` dihapus; tabel `tags` mendapat `description` dan `position`. Tiga tag awal (Musik, Pikiran, Absurd) diisi otomatis. Satu tulisan boleh punya beberapa tag lewat `post_tags`.
+- Halaman tag ada langsung di akar situs: `/musik`, `/pikiran`, dan seterusnya (`app/(public)/(halaman)/[tag]`). Karena itu nama tag tidak boleh bentrok dengan halaman lain (admin, cerita, playlist, tentang, ...); admin menolaknya.
+- Gaya chip tag berulang tiga macam sesuai urutan tag (gelap, abu, bergaris), jadi tag baru otomatis dapat gaya.
+- Admin `/admin/tag`: tambah tag (nama dan keterangan), ubah, hapus. Alamat tag dibuat dari namanya dan tidak berubah saat nama diubah. Menghapus tag hanya melepasnya dari tulisan.
+- Beranda, bagian Tulisan: judul "Yang ini ditulis beneran.", keterangan "Bukan sekedar ocehan absurd. Ini yang dipikirin dulu, baru ditulis." Pilihan tag "Mau yang mana?" tidak ditampilkan di beranda (hanya di `/cerita` dan halaman tag). Lima tulisan terbaru dalam dua kolom: dua yang terbaru jadi kartu (cover lebar di atas) di kiri, tiga berikutnya jadi baris ala Medium (teks kiri, cover kecil kanan) di kanan. Di HP semuanya jadi satu kolom. Di bawahnya selalu ada tombol "Lihat semua tulisannya" ke `/cerita`. Pernah dicoba dan diganti: satu besar lalu tiga kartu, dan daftar satu kolom.
+- `/cerita`: semua tulisan sebagai daftar (teks kiri, cover kecil kanan). `/cerita/[slug]`: halaman baca satu kolom 680px, berisi tag, judul, ringkasan miring, penulis dan tanggal, cover, isi, lalu "Masih ada yang lain, nih" dengan tiga tulisan lain. Gaya isi tulisan ada di kelas `.tulisan` di `app/globals.css` (judul bagian, kutipan, daftar, pemisah tiga titik, gambar monokrom).
+- Data contoh: lima tulisan dengan alamat berawalan `contoh-` dan cover abstrak buatan, untuk melihat tampilan; dihapus sebelum rilis.
+
+Belum dikerjakan: editor tulisan di admin (menulis, memilih tag, unggah cover), tombol Suka, bagikan, dan komentar.
+
+### Alamat tulisan dan saringan tag
+
+- Alamat tulisan memakai `/tulisan`, bukan `/cerita`: daftar di `/tulisan`, halaman baca di `/tulisan/[slug]`. Alamat lama `/cerita` dan `/cerita/[slug]` dialihkan permanen lewat `next.config.ts`. Penyebutan `/cerita` di bagian-bagian sebelumnya dibaca sebagai `/tulisan`.
+- Halaman `/tulisan`: judul "Semua yang pernah ditulis.", keterangan "Urut dari yang paling baru. Pilih aja mana yang judulnya bikin penasaran."
+- Saringan tag berbentuk tab (`TagTabs`): "Semua" lalu tiap tag dengan jumlah tulisannya, tab aktif bergaris bawah tebal, bisa digeser ke samping di HP. Menggantikan deretan chip "Mau yang mana?". Dipakai di `/tulisan` dan halaman tag.
+- Daftar di `/tulisan` dan halaman tag berbentuk kisi: satu baris dua kartu (cover lebar di atas, lalu tag, judul, ringkasan), satu kolom di HP. Daftar baris ala Medium pernah dipakai di sini dan diganti; baris itu sekarang hanya dipakai di kolom kanan beranda dan di bawah halaman baca.
+- Halaman baca `/tulisan/[slug]` ala Medium: satu kolom 680px di tengah, dibaca lurus dari atas ke bawah. Tag, judul, ringkasan, penulis, cover (16:9), isi, dan "Masih ada yang lain, nih" (tiga tulisan lain) semuanya sama lebar. Dipilih dari tujuh opsi mockup. Pernah dicoba dan dibatalkan: susunan dua kolom dengan daftar di samping isi (membingungkan), isi selebar halaman penuh (barisnya terlalu panjang), dan judul serta cover selebar halaman dengan isi sempit di tengah (lebarnya tidak seragam).
+- Penulis di halaman baca selalu "Yazid Syafiq Irsyad", dengan foto bulat berisi gambar dari bagian Oknumnya secara utuh (diperkecil supaya seluruh gambar masuk lingkaran). Lingkarannya kebalikan tema: hitam dengan garis tepi putih seperti stiker di mode terang (`public/oknum/penulis-hitam.png`), abu terang di mode gelap supaya tidak terlalu mencolok (`penulis-abu.png`). Keduanya dibuat oleh `scripts/buat-avatar-oknum.cjs`.
+- Kutipan penegasan di dalam isi tulisan (blockquote) bergaya sama dengan pop up ocehan: tanda kutip raksasa yang pudar, teks besar dan tebal, lalu garis aksen pendek.

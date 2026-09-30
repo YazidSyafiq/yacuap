@@ -4,14 +4,18 @@ import { Hero } from "@/components/site/hero";
 import { OcehanWave } from "@/components/site/ocehan-wave";
 import { Oknum } from "@/components/site/oknum";
 import { PlaylistShowcase } from "@/components/site/playlist-view";
-import { CategoryChip } from "@/components/ui/chip";
+import { PostCard, PostRow } from "@/components/site/post-cards";
+import { buttonClass } from "@/components/ui/button";
 import { Container, Eyebrow } from "@/components/ui/container";
-import { categories, CATEGORY_SLUGS } from "@/lib/categories";
 import { getCelotehan } from "@/lib/celotehan";
 import { getPlaylist } from "@/lib/playlist";
+import { getPosts } from "@/lib/posts";
 
 // Beranda statis, disegarkan berkala. Saat admin sudah ada, penyegaran dipicu langsung saat menerbitkan.
 export const revalidate = 300;
+
+/** Jumlah tulisan di beranda: dua kartu di kiri, tiga baris di kanan. Sisanya di /tulisan. */
+const HOME_POSTS = 5;
 
 /**
  * Kepala bagian, seragam dengan bagian Oknumnya: penanda kecil berisi nama bagian,
@@ -67,7 +71,8 @@ function SectionHeading({
 /** Beranda satu halaman: menu di header menggulir ke bagian-bagian di bawah ini. */
 export default async function HomePage() {
   // semua ocehan untuk bagian Ocehan; balon di hero cukup memakai 40 yang terbaru
-  const [celotehan, playlist] = await Promise.all([getCelotehan(500), getPlaylist()]);
+  const [celotehan, playlist, posts] = await Promise.all([getCelotehan(500), getPlaylist(), getPosts()]);
+  const shown = posts.slice(0, HOME_POSTS);
 
   return (
     <>
@@ -77,23 +82,44 @@ export default async function HomePage() {
         <Container className="flex flex-col gap-8 py-14 md:py-20">
           <SectionHeading
             label="Tulisan"
-            title="Baru kelar nulis, nih."
-            note="Yang panjang-panjang ada di sini. Soal apa aja, tergantung lagi kepikiran apa."
-            href="/cerita"
-            more="Lihat semua, dong"
+            title="Yang ini ditulis beneran."
+            note="Bukan sekedar ocehan absurd. Ini yang dipikirin dulu, baru ditulis."
           />
-          <nav aria-label="Rak tulisan" className="flex flex-wrap items-center gap-2">
-            <span className="pr-1 font-ui text-[13px] text-muted">Mau yang mana?</span>
-            {CATEGORY_SLUGS.map((slug) => (
-              <Link key={slug} href={`/${slug}`} aria-label={`Tulisan ${categories[slug].label}`}>
-                <CategoryChip category={slug} className="px-4 py-2 text-xs" />
-              </Link>
-            ))}
-          </nav>
-          <div className="flex flex-col gap-2 py-4">
-            <p className="font-display text-2xl italic">Belum ada tulisan, nih.</p>
-            <p className="text-[17px] text-muted">Lagi ditulis, sabar ya. Yang pertama bakal nongol di sini.</p>
-          </div>
+          {shown.length > 0 ? (
+            <div className="flex flex-col gap-8">
+              {/* dua tulisan terbaru jadi kartu di kiri, tiga berikutnya jadi daftar di kanan */}
+              <div className="grid grid-cols-1 gap-x-16 gap-y-10 lg:grid-cols-2">
+                <div className="flex min-w-0 flex-col gap-10">
+                  {shown.slice(0, 2).map((post) => (
+                    <PostCard key={post.id} post={post} />
+                  ))}
+                </div>
+                {shown.length > 2 ? (
+                  // barisnya direntangkan supaya tinggi kolom kanan sama dengan kolom kiri
+                  <div className="flex min-w-0 flex-col border-t border-line">
+                    {shown.slice(2).map((post) => (
+                      <PostRow key={post.id} post={post} titleAs="h3" className="lg:flex-1 lg:items-center" />
+                    ))}
+                  </div>
+                ) : null}
+              </div>
+              <div className="flex flex-wrap items-center gap-x-5 gap-y-3">
+                <Link href="/tulisan" className={buttonClass("secondary", "md")}>
+                  Lihat semua tulisannya
+                </Link>
+                {posts.length > HOME_POSTS ? (
+                  <p className="font-ui text-sm text-muted">
+                    Ini baru {HOME_POSTS} dari {posts.length} tulisan.
+                  </p>
+                ) : null}
+              </div>
+            </div>
+          ) : (
+            <div className="flex flex-col gap-2 py-4">
+              <p className="font-display text-2xl italic">Belum ada tulisan, nih.</p>
+              <p className="text-[17px] text-muted">Lagi ditulis, sabar ya. Yang pertama bakal nongol di sini.</p>
+            </div>
+          )}
         </Container>
       </section>
 

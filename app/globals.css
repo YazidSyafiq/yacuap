@@ -286,3 +286,144 @@ html::-webkit-scrollbar {
     }
   }
 }
+
+/*
+ * Isi tulisan di halaman baca. HTML-nya datang dari editor, jadi gayanya lewat turunan kelas ini.
+ * Huruf baca Newsreader 21px (19px di HP), jarak antarparagraf lega.
+ */
+.tulisan {
+  font-size: 1.1875rem;
+  line-height: 1.7;
+}
+
+@media (min-width: 40rem) {
+  .tulisan {
+    font-size: 1.3125rem;
+  }
+}
+
+.tulisan > * + * {
+  margin-top: 1.35em;
+}
+
+.tulisan h2 {
+  margin-top: 2em;
+  font-family: var(--font-display);
+  font-size: 1.5em;
+  font-weight: 500;
+  line-height: 1.2;
+}
+
+.tulisan h3 {
+  margin-top: 1.8em;
+  font-family: var(--font-display);
+  font-size: 1.2em;
+  font-weight: 500;
+  line-height: 1.25;
+}
+
+.tulisan h2 + *,
+.tulisan h3 + * {
+  margin-top: 0.7em;
+}
+
+.tulisan a {
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
+}
+
+.tulisan strong {
+  font-weight: 600;
+}
+
+/*
+ * Kutipan penegasan: gayanya sama dengan pop up ocehan di beranda.
+ * Tanda kutip raksasa yang pudar di belakang, teks besar dan tebal, lalu garis aksen pendek di bawahnya.
+ */
+.tulisan blockquote {
+  position: relative;
+  margin-top: 2.2em;
+  margin-bottom: 2.2em;
+  padding-left: 1.5em;
+  font-family: var(--font-display);
+  font-size: 1.5em;
+  font-weight: 600;
+  line-height: 1.2;
+  letter-spacing: -0.01em;
+}
+
+.tulisan blockquote::before {
+  content: "\201C";
+  position: absolute;
+  left: -0.06em;
+  top: -0.28em;
+  font-size: 5em;
+  line-height: 1;
+  color: color-mix(in srgb, var(--ink) 12%, transparent);
+  pointer-events: none;
+  user-select: none;
+}
+
+.tulisan blockquote::after {
+  content: "";
+  display: block;
+  margin-top: 0.75em;
+  height: 4px;
+  width: 64px;
+  border-radius: 999px;
+  background: var(--ink);
+}
+
+@media (min-width: 40rem) {
+  .tulisan blockquote {
+    padding-left: 2em;
+    font-size: 1.75em;
+  }
+}
+
+.tulisan ul,
+.tulisan ol {
+  padding-left: 1.3em;
+}
+
+.tulisan ul {
+  list-style: disc;
+}
+
+.tulisan ol {
+  list-style: decimal;
+}
+
+.tulisan li + li {
+  margin-top: 0.4em;
+}
+
+/* pemisah: tiga titik di tengah, bukan garis */
+.tulisan hr {
+  margin: 2.2em 0;
+  border: 0;
+  text-align: center;
+}
+
+.tulisan hr::before {
+  content: "· · ·";
+  font-family: var(--font-display);
+  font-size: 1.4em;
+  letter-spacing: 0.4em;
+  color: var(--muted);
+}
+
+.tulisan img {
+  width: 100%;
+  border-radius: 0.75rem;
+  filter: grayscale(1);
+}
+
+.tulisan figcaption {
+  margin-top: 0.6em;
+  text-align: center;
+  font-family: var(--font-ui);
+  font-size: 0.8125rem;
+  color: var(--muted);
+}
