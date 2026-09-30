@@ -22,7 +22,7 @@ export default function AboutPage() {
       <div className="flex flex-col gap-6 text-[1.3125rem] leading-[1.7]">
         <p>
           {site.name} itu singkatan dari Yazid cuap-cuap. Isinya apa aja yang lewat di kepala: cerita yang
-          panjang-panjang, celotehan yang cuma sebaris, sampai lagu yang lagi sering diputer.
+          panjang-panjang, celotehan yang cuma sebaris, sampai lagu yang lagi sering diputar.
         </p>
         <p>Nggak ada tema khusus, nggak ada jadwal. Kalau lagi pengen nulis, ya ditulis.</p>
         <p>Boleh didengerin, boleh dicuekin.</p>

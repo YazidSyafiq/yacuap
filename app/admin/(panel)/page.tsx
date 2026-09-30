@@ -2,7 +2,7 @@ import { Card } from "@/components/ui/card";
 
 const phases = [
   { name: "Tulisan", note: "Editor, draf, terbit. Menyusul di Phase 1." },
-  { name: "Playlist", note: "Lagu, catatan, pemutar. Menyusul di Phase 2." },
+  { name: "Playlist", note: "Lagu, catatan, pemutar. Sudah bisa dipakai." },
   { name: "Komentar", note: "Balas, sembunyikan, hapus. Menyusul di Phase 4." },
 ];
 

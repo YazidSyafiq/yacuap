@@ -1,12 +1,17 @@
-import { SiteFooter } from "@/components/site/footer";
+import { PlayerBar } from "@/components/player/player-bar";
 import { SiteHeader } from "@/components/site/header";
 
+/**
+ * Kerangka semua halaman publik: header di atas, bar pemutar musik di bawah.
+ * Footer hanya ada di beranda, lihat (beranda)/layout.tsx.
+ */
 export default function PublicLayout({ children }: LayoutProps<"/">) {
   return (
     <>
       <SiteHeader />
-      <main className="flex-1">{children}</main>
-      <SiteFooter />
+      {children}
+      {/* bar pemutar ada di layout ini supaya lagu tidak putus saat pindah halaman */}
+      <PlayerBar />
     </>
   );
 }

@@ -3,10 +3,12 @@ import type { ReactNode } from "react";
 import { Hero } from "@/components/site/hero";
 import { OcehanWave } from "@/components/site/ocehan-wave";
 import { Oknum } from "@/components/site/oknum";
+import { PlaylistShowcase } from "@/components/site/playlist-view";
 import { CategoryChip } from "@/components/ui/chip";
 import { Container, Eyebrow } from "@/components/ui/container";
 import { categories, CATEGORY_SLUGS } from "@/lib/categories";
 import { getCelotehan } from "@/lib/celotehan";
+import { getPlaylist } from "@/lib/playlist";
 
 // Beranda statis, disegarkan berkala. Saat admin sudah ada, penyegaran dipicu langsung saat menerbitkan.
 export const revalidate = 300;
@@ -65,7 +67,7 @@ function SectionHeading({
 /** Beranda satu halaman: menu di header menggulir ke bagian-bagian di bawah ini. */
 export default async function HomePage() {
   // semua ocehan untuk bagian Ocehan; balon di hero cukup memakai 40 yang terbaru
-  const celotehan = await getCelotehan(500);
+  const [celotehan, playlist] = await Promise.all([getCelotehan(500), getPlaylist()]);
 
   return (
     <>
@@ -100,14 +102,17 @@ export default async function HomePage() {
           <SectionHeading
             label="Playlist"
             title="Lagi sering muter ini."
-            note="Lagu-lagunya ada di sini, lengkap sama alasan kenapa masuk."
-            href="/playlist"
-            more="Lihat semua, dong"
+            note="Tiap lagu ada ceritanya, kenapa bisa sampai masuk sini."
           />
-          <div className="flex flex-col gap-2 py-4">
-            <p className="font-display text-2xl italic">Belum ada playlist, nih.</p>
-            <p className="text-[17px] text-muted">Lagi dipilih-pilih dulu. Nanti bisa langsung diputer dari sini.</p>
-          </div>
+          {playlist ? (
+            // di beranda cukup beberapa lagu pertama; daftar lengkapnya di /playlist
+            <PlaylistShowcase playlist={playlist} limit={5} />
+          ) : (
+            <div className="flex flex-col gap-2 py-4">
+              <p className="font-display text-2xl italic">Belum ada lagunya, nih.</p>
+              <p className="text-[17px] text-muted">Lagunya lagi dipilih-pilih dulu. Nanti tinggal pencet, langsung bunyi.</p>
+            </div>
+          )}
         </Container>
       </section>
 

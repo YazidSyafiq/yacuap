@@ -38,7 +38,7 @@ export function Oknum() {
             <h3 className="font-display text-2xl font-medium">Terus, kenapa bikin ini?</h3>
             <p className="text-lg leading-relaxed text-muted">
               Soalnya pengen punya tempat sendiri buat nuangin apa aja dalam tulisan. Mau cerita panjang, mau ngelantur
-              soal hal absurd, mau pamer lagu yang lagi sering diputer, semuanya bisa di sini. Nggak ada tema khusus,
+              soal hal absurd, mau pamer lagu yang lagi sering diputar, semuanya bisa di sini. Nggak ada tema khusus,
               nggak ada jadwal. Kalau lagi pengen nulis, ya ditulis.
             </p>
             <p className="font-display text-xl italic">Boleh didengerin, boleh dicuekin.</p>

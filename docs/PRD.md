@@ -755,3 +755,26 @@ Semua ocehan tampil sebagai teks tanpa kotak yang mengalir rapat di lima jalur z
 - Tanpa JavaScript atau kalau pengunjung meminta animasi dikurangi: daftar teks biasa yang turun baris, tanpa pop up otomatis. Pop up lewat klik tetap jalan.
 
 Pernah dicoba dan dibatalkan: baris teks berjalan dengan ocehan yang "nyala" acak, dan kisi kutipan besar bergaya visi untuk semua ocehan. Gaya visi sekarang hanya dipakai di pop up.
+
+### Playlist, 30 September 2026
+
+Keputusan: situs ini hanya punya **satu playlist**, bukan kumpulan playlist. Sempat dicoba dengan tiga playlist contoh dan halaman kumpulan, lalu dibatalkan. Ini menggantikan rencana di bagian 3.3 dan Phase 2 soal banyak playlist, `/playlist/[slug]`, dan tanda "featured".
+
+Yang sudah jadi:
+
+- Tabel `tracks`, `playlists`, `playlist_tracks`, dan kolom `posts.soundtrack_track_id`, lengkap dengan RLS (`supabase/migrations/20260930030000_playlist.sql`). Tabel `playlists` tetap dipakai walau isinya satu baris, supaya tidak perlu diubah kalau suatu saat mau lebih dari satu. Yang dipakai adalah playlist terbit yang paling lama dibuat (`getPlaylist` di `lib/playlist.ts`).
+- Admin `/admin/playlist` langsung mengatur isi playlist itu: tempel tautan YouTube untuk menambah lagu. Judul dan artis diambil dari oEmbed dan dirapikan ("Artis - Judul (Official Video)" jadi artis dan judul), tetap bisa diedit. Tiap lagu punya catatan "kenapa masuk", bisa dinaikkan, diturunkan, dan dikeluarkan (tombol panah, bukan seret). Nama dan keterangan playlist bisa diubah. Tidak ada buat baru, hapus, atau draf; kalau playlistnya belum ada, dibuat otomatis saat halaman admin dibuka.
+- Sampul lagu: thumbnail YouTube dipotong persegi di tengah, dijadikan hitam putih dengan sharp, lalu disimpan ke bucket `covers` sebagai `tracks/<youtube_id>.webp` (`lib/youtube.ts`). Sampul playlist dirangkai dari empat sampul lagu pertamanya.
+- Pemutar (`lib/player-store.ts`): satu YouTube IFrame Player untuk seluruh situs, 1 x 1 px dan transparan di pojok layar. Keadaannya disimpan di tingkat modul dan dibaca lewat `usePlayer`, jadi lagu tidak putus saat pindah halaman. Pemutar disiapkan begitu ada daftar lagu di halaman, supaya di HP lagu bisa langsung jalan saat tombol ditekan.
+- Bar pemutar (`components/player/player-bar.tsx`) di bawah layar, warnanya kebalikan tema seperti footer: sampul, judul, artis, garis kemajuan yang bisa ditekan, sebelumnya, play/jeda, berikutnya, tutup. Lagu selesai, lanjut ke lagu berikutnya. Video yang tidak boleh diputar di luar YouTube menampilkan "Yah, yang ini nggak bisa diputar di sini." dengan tautan "Dengerin di YouTube aja".
+- Bagian Playlist di beranda: kiri sampul, jumlah lagu, nama, keterangan, dan tombol "Putar dari awal"; kanan daftar lagu (nomor, sampul dengan tombol play, judul, artis, catatan miring). Beranda menampilkan paling banyak lima lagu teratas; kalau lagunya lebih dari itu, di bawah daftar ada tombol "Lihat semua lagunya" ke `/playlist` (menggantikan tautan "Lihat semua, dong" di kepala bagian). Catatan yang tidak muat sebaris dipotong seperti caption Instagram dengan "selengkapnya"; ditekan, tampil utuh dengan "tutup". Keterangan bagian: "Tiap lagu ada ceritanya, kenapa bisa sampai masuk sini." Kata yang dipakai "putar", bukan "puter".
+
+Belum dikerjakan: tombol "Putar sambil baca" dan kartu lagu di dalam tulisan (menunggu editor di Phase 1), tautan Spotify, status iklan di bar, dan durasi lagu di daftar.
+
+Data contoh: satu playlist "Contoh playlist" berisi delapan lagu masih ada di database untuk melihat tampilan; dihapus atau diganti sebelum rilis.
+
+Akun admin belum ada: akun dibuat di dasbor Supabase (Authentication, Users), lalu `user_id`-nya didaftarkan ke tabel `admins`.
+
+### Footer hanya di beranda
+
+Footer hanya tampil di beranda. Halaman lain (daftar lagu `/playlist`, rak tulisan, dan nanti halaman baca) tidak memakai footer: isinya header, isi halaman, dan bar pemutar kalau ada lagu yang jalan. Susunannya: `app/(public)/layout.tsx` berisi header dan bar pemutar, `app/(public)/(beranda)/layout.tsx` menambahkan footer, `app/(public)/(halaman)/layout.tsx` tanpa footer.
