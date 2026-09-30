@@ -7,10 +7,13 @@ export default function TulisanLoading() {
     <Loading>
       <div className="flex flex-col gap-6">
         <LoadingHeader />
-        <div className="flex gap-2">
-          {Array.from({ length: 3 }, (_, i) => (
-            <Skeleton key={i} className="h-10 w-24 rounded-xl" />
-          ))}
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+          <div className="flex gap-2">
+            {Array.from({ length: 3 }, (_, i) => (
+              <Skeleton key={i} className="h-11 w-24 rounded-xl" />
+            ))}
+          </div>
+          <Skeleton className="h-11 flex-1" />
         </div>
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
           {Array.from({ length: 6 }, (_, i) => (
