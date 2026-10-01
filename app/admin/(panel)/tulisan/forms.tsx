@@ -6,12 +6,12 @@ import { useState } from "react";
 import { ArchiveIcon, EyeIcon, PenIcon, PublishIcon, SearchIcon, TrashIcon } from "@/components/admin/icons";
 import { Modal } from "@/components/admin/modal";
 import { AdminPageHeader } from "@/components/admin/page-header";
-import { Button } from "@/components/ui/button";
+import { Button, buttonClass } from "@/components/ui/button";
 import { TagChip } from "@/components/ui/chip";
 import { Input } from "@/components/ui/field";
 import { SubmitButton } from "@/components/ui/submit-button";
 import { cn } from "@/lib/cn";
-import { createDraft, deletePost, setPostStatus } from "./actions";
+import { deletePost, setPostStatus } from "./actions";
 
 export type PostItem = {
   id: string;
@@ -185,9 +185,10 @@ export function PostManager({ posts }: { posts: PostItem[] }) {
         title="Tulisan"
         note={`${counts.terbit} terbit, ${counts.draf} draf. Yang terbit langsung bisa dibaca di situs; draf hanya terlihat di sini.`}
         action={
-          <form action={createDraft}>
-            <SubmitButton block="sm">Tulis Baru</SubmitButton>
-          </form>
+          // membuka editor kosong saja; tulisannya baru dibuat saat pertama kali disimpan
+          <Link href="/admin/tulisan/baru" className={buttonClass("primary", "md", undefined, "sm")}>
+            Tulis Baru
+          </Link>
         }
       />
 

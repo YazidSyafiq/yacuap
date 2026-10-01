@@ -6,6 +6,7 @@ import { EditorContent, useEditor, useEditorState, type Editor } from "@tiptap/r
 import StarterKit from "@tiptap/starter-kit";
 import NextImage from "next/image";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useActionState, useEffect, useLayoutEffect, useMemo, useRef, useState, useTransition, type TextareaHTMLAttributes } from "react";
 import { BackIcon, EyeIcon, ImageIcon, LinkIcon, MusicIcon, SearchIcon } from "@/components/admin/icons";
 import { Modal } from "@/components/admin/modal";
@@ -151,7 +152,7 @@ function Toolbar({ editor, onImage, onTrack, uploading }: { editor: Editor; onIm
   const divider = <span aria-hidden="true" className="mx-1 h-5 w-px bg-line" />;
 
   return (
-    <div className="sticky top-14 z-20 flex flex-wrap items-center gap-0.5 border-y border-line bg-bg/95 px-3 py-1.5 backdrop-blur-md sm:px-6">
+    <div className="sticky top-14 z-20 flex flex-wrap items-center gap-0.5 border-y border-line bg-bg/95 px-2 py-1.5 backdrop-blur-md sm:px-6">
       <ToolButton label="Tebal" active={state.bold} onClick={() => editor.chain().focus().toggleBold().run()}>
         <span className="font-bold">B</span>
       </ToolButton>
@@ -260,12 +261,19 @@ function TrackModal({ tracks, onPick, onClose }: { tracks: EditorTrack[]; onPick
  * kiri satu kartu berisi judul besar, ringkasan, toolbar, dan isi; kanan satu kartu berisi
  * cover, status, alamat, tag, lalu tombol terbit dan draf bertumpuk. Tombol Pratinjau menampilkan hasilnya seperti di situs.
  * Tidak ada simpan otomatis: tulisan, cover, tag, dan lainnya baru tersimpan saat tombol di kartu kanan ditekan.
+ * Tulisan baru (id kosong) baru dibuat di database saat pertama kali disimpan.
+ * Kalau mau meninggalkan halaman saat masih ada perubahan, muncul pop up konfirmasi simpan.
  */
 export function PostEditor({ post, tags, tracks }: { post: EditorPost; tags: EditorTag[]; tracks: EditorTrack[] }) {
   const [title, setTitle] = useState(post.title);
   const [slug, setSlug] = useState(post.slug);
   const [slugTouched, setSlugTouched] = useState(Boolean(post.title) && slugify(post.title) !== post.slug);
   const [excerpt, setExcerpt] = useState(post.excerpt);
+  const router = useRouter();
+  // kosong selama tulisan baru belum pernah disimpan
+  const [postId, setPostId] = useState(post.id);
+  // alamat yang mau dituju saat masih ada perubahan; terisi berarti pop up konfirmasi sedang tampil
+  const [leaveHref, setLeaveHref] = useState<string | null>(null);
   const [published, setPublished] = useState(post.published);
   const [tagIds, setTagIds] = useState<string[]>(post.tagIds);
   const [cover, setCover] = useState(post.cover);
@@ -310,50 +318,77 @@ export function PostEditor({ post, tags, tracks }: { post: EditorPost; tags: Edi
 
   const touch = () => setDirty(true);
 
-  // peringatan bawaan browser kalau halaman ditutup saat masih ada perubahan yang belum disimpan
+  // Selama ada perubahan yang belum disimpan:
+  // - menutup atau memuat ulang halaman memunculkan peringatan bawaan browser;
+  // - mengklik tautan mana pun di halaman (Kembali, menu sidebar, dan lainnya) dicegat dulu dengan pop up konfirmasi.
   useEffect(() => {
     if (!dirty) return;
     const warn = (event: BeforeUnloadEvent) => event.preventDefault();
+    const intercept = (event: MouseEvent) => {
+      if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey) return;
+      const anchor = (event.target as Element | null)?.closest?.("a[href]") as HTMLAnchorElement | null;
+      if (!anchor || anchor.target === "_blank" || anchor.origin !== window.location.origin) return;
+      if (anchor.pathname === window.location.pathname) return;
+      event.preventDefault();
+      event.stopPropagation();
+      setLeaveHref(anchor.pathname + anchor.search + anchor.hash);
+    };
     window.addEventListener("beforeunload", warn);
-    return () => window.removeEventListener("beforeunload", warn);
+    document.addEventListener("click", intercept, true);
+    return () => {
+      window.removeEventListener("beforeunload", warn);
+      document.removeEventListener("click", intercept, true);
+    };
   }, [dirty]);
 
-  /** Menyimpan: cover (kalau diganti atau dilepas) dulu, lalu seluruh formulir dan isi editor. */
-  const save = (publish: boolean) => {
+  /**
+   * Menyimpan lewat tombol: tulisannya dulu (untuk tulisan baru, di sinilah barisnya dibuat), lalu cover kalau
+   * diganti atau dilepas. `after` dijalankan kalau berhasil, misalnya untuk meninggalkan halaman.
+   */
+  const save = (publish: boolean, after?: () => void) => {
     const form = formRef.current;
     if (!form || !editor) return;
     const formData = new FormData(form);
+    formData.set("id", postId);
     formData.set("status", publish ? "published" : "draft");
     formData.set("content_json", JSON.stringify(editor.getJSON()));
     formData.set("content_html", editor.getHTML());
     startSaving(async () => {
+      const result = await savePost(undefined, formData);
+      if (result?.error || !result?.id) {
+        setError(result?.error ?? "Gagal menyimpan. Coba lagi.");
+        return;
+      }
+      const id = result.id;
       if (coverFile) {
         const coverData = new FormData();
-        coverData.set("id", post.id);
+        coverData.set("id", id);
         coverData.set("file", coverFile);
         const uploaded = await uploadCover(coverData);
         if ("error" in uploaded) {
-          setError(uploaded.error);
+          // tulisannya sudah tersimpan; hanya covernya yang gagal
+          setPostId(id);
+          setError(`Tulisannya tersimpan, tapi covernya gagal: ${uploaded.error}`);
           return;
         }
         setCover(uploaded.url);
         setCoverFile(null);
       } else if (coverRemoved) {
         const coverData = new FormData();
-        coverData.set("id", post.id);
+        coverData.set("id", id);
         await removeCover(coverData);
+        setCover(null);
         setCoverRemoved(false);
-      }
-      const result = await savePost(undefined, formData);
-      if (result?.error) {
-        setError(result.error);
-        return;
       }
       setError(null);
       setDirty(false);
-      if (result?.savedAt) setSavedAt(result.savedAt);
-      if (result?.slug && result.slug !== slug) setSlug(result.slug);
+      setPostId(id);
+      if (result.savedAt) setSavedAt(result.savedAt);
+      if (result.slug && result.slug !== slug) setSlug(result.slug);
       setPublished(publish);
+      if (after) after();
+      // tulisan baru: setelah tersimpan pertama kali, alamat editornya pindah ke alamat tulisannya
+      else if (!post.id) router.replace(`/admin/tulisan/${id}`);
     });
   };
 
@@ -362,7 +397,6 @@ export function PostEditor({ post, tags, tracks }: { post: EditorPost; tags: Edi
     setUploadError(null);
     setUploading(true);
     const formData = new FormData();
-    formData.set("id", post.id);
     formData.set("file", file);
     const result = await uploadInlineImage(formData);
     setUploading(false);
@@ -396,7 +430,7 @@ export function PostEditor({ post, tags, tracks }: { post: EditorPost; tags: Edi
 
   return (
     <form ref={formRef} onSubmit={(event) => event.preventDefault()} className="flex flex-col gap-5">
-      <input type="hidden" name="id" value={post.id} />
+      <input type="hidden" name="id" value={postId} />
 
       {/* baris atas: kembali di kiri, keadaan simpan dan tautan lihat di kanan */}
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -404,7 +438,7 @@ export function PostEditor({ post, tags, tracks }: { post: EditorPost; tags: Edi
           <BackIcon className="size-4" />
           Kembali ke daftar
         </Link>
-        <div className="flex flex-wrap items-center gap-4 text-sm">
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm">
           <span className="text-muted">{statusText}</span>
           <button
             type="button"
@@ -427,7 +461,7 @@ export function PostEditor({ post, tags, tracks }: { post: EditorPost; tags: Edi
         {/* kiri: judul dan editor */}
         <div className="flex min-w-0 flex-col gap-4">
           <div className="flex flex-1 flex-col overflow-hidden rounded-2xl border border-line bg-surface">
-            <div className="flex flex-col gap-2 px-5 pb-5 pt-6 sm:px-8 sm:pt-7">
+            <div className="flex flex-col gap-2 px-4 pb-5 pt-5 sm:px-8 sm:pt-7">
               <AutoTextarea
                 name="title"
                 value={title}
@@ -456,7 +490,7 @@ export function PostEditor({ post, tags, tracks }: { post: EditorPost; tags: Edi
             </div>
             {editor ? <Toolbar editor={editor} uploading={uploading} onImage={() => imageInputRef.current?.click()} onTrack={() => setTrackModal(true)} /> : null}
             {/* area isi mengisi sisa tinggi kartu; diklik di mana pun, kursor masuk ke tulisan */}
-            <div className="flex flex-1 cursor-text flex-col px-5 py-4 sm:px-8 sm:py-6" onClick={() => editor?.commands.focus()}>
+            <div className="flex min-w-0 flex-1 cursor-text flex-col px-4 py-4 sm:px-8 sm:py-6" onClick={() => editor?.commands.focus()}>
               <EditorContent editor={editor} className="flex flex-1 flex-col [&>div]:flex-1" />
             </div>
           </div>
@@ -475,7 +509,7 @@ export function PostEditor({ post, tags, tracks }: { post: EditorPost; tags: Edi
         </div>
 
         {/* kanan: keterangan tulisan, dalam satu kartu */}
-        <aside className="flex flex-col gap-5 rounded-2xl border border-line bg-surface p-6">
+        <aside className="flex min-w-0 flex-col gap-5 rounded-2xl border border-line bg-surface p-5 sm:p-6">
           <div className={section}>
             <span className={label}>Cover</span>
             <div className="relative aspect-[16/9] overflow-hidden rounded-xl bg-(--cover)">
@@ -554,27 +588,45 @@ export function PostEditor({ post, tags, tracks }: { post: EditorPost; tags: Edi
             {tags.length === 0 ? (
               <span className="text-xs text-muted">Belum ada tag. Bikin dulu di menu Tag.</span>
             ) : (
-              <div className="flex flex-wrap gap-2 pt-1">
-                {tags.map((tag) => {
-                  const checked = tagIds.includes(tag.id);
-                  return (
-                    <label key={tag.id} className={cn("cursor-pointer rounded-full", checked ? "ring-2 ring-ink ring-offset-2 ring-offset-surface" : "opacity-60 hover:opacity-100")}>
-                      <input
-                        type="checkbox"
-                        name="tags"
-                        value={tag.id}
-                        checked={checked}
-                        onChange={(event) => {
-                          setTagIds((current) => (event.target.checked ? [...current, tag.id] : current.filter((id) => id !== tag.id)));
-                          touch();
-                        }}
-                        className="sr-only"
-                      />
-                      <TagChip tag={tag} />
-                    </label>
-                  );
-                })}
-              </div>
+              <>
+                {/* pilihan berbentuk pil: yang dipilih hitam bercentang, yang belum bergaris dengan tanda tambah */}
+                {/* tiga pil sebaris; di HP yang sangat sempit (di bawah 360px) jadi dua supaya namanya tidak terpotong */}
+                <div className="grid grid-cols-2 gap-1.5 pt-1 min-[360px]:grid-cols-3">
+                  {tags.map((tag) => {
+                    const checked = tagIds.includes(tag.id);
+                    return (
+                      <label
+                        key={tag.id}
+                        className={cn(
+                          "flex h-8 min-w-0 cursor-pointer select-none items-center gap-1 rounded-full border px-2 text-[13px] font-medium transition-colors has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-ink",
+                          checked ? "border-ink bg-ink text-surface" : "border-border-strong bg-surface text-ink hover:border-ink",
+                        )}
+                      >
+                        <input
+                          type="checkbox"
+                          name="tags"
+                          value={tag.id}
+                          checked={checked}
+                          onChange={(event) => {
+                            setTagIds((current) => (event.target.checked ? [...current, tag.id] : current.filter((id) => id !== tag.id)));
+                            touch();
+                          }}
+                          className="sr-only"
+                        />
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" className="size-3.5 shrink-0">
+                          {checked ? <path d="M5 12.5l4.5 4.5L19 7.5" /> : <path d="M12 6v12M6 12h12" />}
+                        </svg>
+                        <span className="truncate" title={tag.name}>
+                          {tag.name}
+                        </span>
+                      </label>
+                    );
+                  })}
+                </div>
+                <span className="text-xs text-muted">
+                  {tagIds.length === 0 ? "Belum ada yang dipilih. Boleh lebih dari satu." : `${tagIds.length} dipilih. Klik lagi untuk melepas.`}
+                </span>
+              </>
             )}
           </div>
 
@@ -605,6 +657,40 @@ export function PostEditor({ post, tags, tracks }: { post: EditorPost; tags: Edi
           </div>
         </aside>
       </div>
+
+      {leaveHref ? (
+        <Modal open onClose={() => setLeaveHref(null)} title="Simpan Dulu?" note="Ada perubahan yang belum disimpan. Kalau keluar sekarang, perubahannya hilang.">
+          <div className="flex flex-col gap-2">
+            {error ? <FormError>{error}</FormError> : null}
+            <Button
+              block
+              disabled={saving}
+              onClick={() => {
+                const target = leaveHref;
+                save(published, () => router.push(target));
+              }}
+            >
+              {saving ? "Menyimpan..." : published ? "Simpan & Keluar" : "Simpan Draf & Keluar"}
+            </Button>
+            <Button
+              block
+              variant="secondary"
+              disabled={saving}
+              onClick={() => {
+                const target = leaveHref;
+                setDirty(false);
+                setLeaveHref(null);
+                router.push(target);
+              }}
+            >
+              Keluar Tanpa Menyimpan
+            </Button>
+            <Button block variant="ghost" disabled={saving} onClick={() => setLeaveHref(null)}>
+              Lanjut Nulis
+            </Button>
+          </div>
+        </Modal>
+      ) : null}
 
       {preview ? (
         <Modal open onClose={() => setPreview(null)} size="xl" title="Pratinjau" note="Begini tampilannya di situs. Yang tampil adalah isi sekarang, termasuk yang belum disimpan.">

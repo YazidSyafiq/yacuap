@@ -474,6 +474,11 @@ textarea:-webkit-autofill {
 }
 
 /* Editor tulisan (Tiptap): tampil persis seperti halaman baca lewat kelas .tulisan; ini hanya tambahan perilakunya. */
+/* Isi editor tidak boleh melebarkan kartunya: kata atau tautan yang sangat panjang dipatahkan. */
+.tulisan {
+  overflow-wrap: anywhere;
+}
+
 /* Di editor hurufnya sedikit lebih kecil dari halaman baca, supaya lebih banyak tulisan terlihat sekaligus. */
 .tulisan.tiptap {
   font-size: 1.0625rem;

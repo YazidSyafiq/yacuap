@@ -1,12 +1,11 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { redirect } from "next/navigation";
 import { requireAdmin } from "@/lib/auth";
 import { toMonochromeWebp } from "@/lib/images";
 import { buildTrackArtwork, fetchYoutubeInfo, parseYoutubeId } from "@/lib/youtube";
 
-export type SaveState = { error?: string; savedAt?: string; slug?: string } | undefined;
+export type SaveState = { error?: string; savedAt?: string; slug?: string; id?: string } | undefined;
 export type UploadResult = { url: string; path: string } | { error: string };
 
 const RESERVED = new Set(["baru"]);
@@ -35,38 +34,29 @@ function coverPublicUrl(path: string) {
   return `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/covers/${path}`;
 }
 
-/** Tulisan baru: dibuat sebagai draf kosong, lalu langsung dibuka di editor. */
-export async function createDraft() {
-  const { supabase } = await requireAdmin();
-  const { data, error } = await supabase
-    .from("posts")
-    .insert({ title: "", slug: `draf-${Date.now().toString(36)}`, status: "draft" })
-    .select("id")
-    .single();
-  if (error || !data) throw new Error("Draf baru gagal dibuat.");
-  redirect(`/admin/tulisan/${data.id}`);
-}
-
 /**
  * Menyimpan tulisan dari editor: judul, alamat, ringkasan, isi (JSON dan HTML), tag, status.
- * Dipanggil oleh tombol Simpan dan oleh simpan otomatis.
+ * Hanya dipanggil lewat tombol. Kalau `id` kosong, ini tulisan baru: barisnya baru dibuat di sini,
+ * jadi membuka editor "Tulis Baru" saja tidak meninggalkan draf kosong.
  */
 export async function savePost(_prev: SaveState, formData: FormData): Promise<SaveState> {
   const { supabase } = await requireAdmin();
-  const id = text(formData, "id");
-  if (!id) return { error: "Tulisannya tidak ditemukan." };
+  const existingId = text(formData, "id");
 
   const title = text(formData, "title").slice(0, 200);
   const status = text(formData, "status") === "published" ? "published" : "draft";
   if (status === "published" && !title) return { error: "Judulnya diisi dulu sebelum terbit." };
 
   // alamat: dari isian, atau dari judul; harus unik dan tidak memakai kata yang dipakai halaman admin
-  let slug = slugify(text(formData, "slug")) || slugify(title) || `draf-${id.slice(0, 8)}`;
+  const fallback = `draf-${Date.now().toString(36)}`;
+  let slug = slugify(text(formData, "slug")) || slugify(title) || fallback;
   if (RESERVED.has(slug)) slug = `${slug}-tulisan`;
-  const { data: clash } = await supabase.from("posts").select("id").eq("slug", slug).neq("id", id).maybeSingle();
+  let clashQuery = supabase.from("posts").select("id").eq("slug", slug);
+  if (existingId) clashQuery = clashQuery.neq("id", existingId);
+  const { data: clash } = await clashQuery.maybeSingle();
   if (clash) {
     if (status === "published") return { error: `Alamat "${slug}" sudah dipakai tulisan lain. Ganti alamatnya.` };
-    slug = `${slug}-${id.slice(0, 4)}`;
+    slug = `${slug}-${Date.now().toString(36).slice(-4)}`;
   }
 
   const contentHtml = String(formData.get("content_html") ?? "");
@@ -79,23 +69,31 @@ export async function savePost(_prev: SaveState, formData: FormData): Promise<Sa
   const words = contentHtml.replace(/<[^>]+>/g, " ").split(/\s+/).filter(Boolean).length;
   const readingTime = Math.max(1, Math.round(words / 200));
 
-  const { data: current } = await supabase.from("posts").select("published_at").eq("id", id).maybeSingle();
-  const publishedAt = status === "published" ? (current?.published_at ?? new Date().toISOString()) : (current?.published_at ?? null);
+  const fields = {
+    title,
+    slug,
+    excerpt: text(formData, "excerpt").slice(0, 300),
+    content,
+    content_html: contentHtml,
+    status,
+    reading_time: readingTime,
+  };
 
-  const { error } = await supabase
-    .from("posts")
-    .update({
-      title,
-      slug,
-      excerpt: text(formData, "excerpt").slice(0, 300),
-      content,
-      content_html: contentHtml,
-      status,
-      published_at: publishedAt,
-      reading_time: readingTime,
-    })
-    .eq("id", id);
-  if (error) return { error: "Gagal menyimpan. Coba lagi." };
+  let id = existingId;
+  if (existingId) {
+    const { data: current } = await supabase.from("posts").select("published_at").eq("id", existingId).maybeSingle();
+    const publishedAt = status === "published" ? (current?.published_at ?? new Date().toISOString()) : (current?.published_at ?? null);
+    const { error } = await supabase.from("posts").update({ ...fields, published_at: publishedAt }).eq("id", existingId);
+    if (error) return { error: "Gagal menyimpan. Coba lagi." };
+  } else {
+    const { data: created, error } = await supabase
+      .from("posts")
+      .insert({ ...fields, published_at: status === "published" ? new Date().toISOString() : null })
+      .select("id")
+      .single();
+    if (error || !created) return { error: "Gagal menyimpan. Coba lagi." };
+    id = String(created.id);
+  }
 
   // tag: hapus relasi lama, pasang yang dipilih
   const tagIds = formData.getAll("tags").map(String).filter(Boolean);
@@ -105,7 +103,7 @@ export async function savePost(_prev: SaveState, formData: FormData): Promise<Sa
   }
 
   refresh();
-  return { savedAt: new Date().toISOString(), slug };
+  return { savedAt: new Date().toISOString(), slug, id };
 }
 
 /** Mengunggah cover tulisan: dijadikan hitam putih, disimpan, dan langsung dipasang ke tulisannya. */
@@ -141,14 +139,14 @@ export async function removeCover(formData: FormData) {
 /** Mengunggah gambar di dalam isi tulisan: hitam putih juga, dikembalikan alamatnya untuk disisipkan editor. */
 export async function uploadInlineImage(formData: FormData): Promise<UploadResult> {
   const { supabase } = await requireAdmin();
-  const id = text(formData, "id");
   const file = formData.get("file");
-  if (!id || !(file instanceof File)) return { error: "Filenya tidak terkirim." };
+  if (!(file instanceof File)) return { error: "Filenya tidak terkirim." };
 
   const result = await toMonochromeWebp(file, 1400);
   if ("error" in result) return result;
 
-  const path = `posts/${id}/${Date.now().toString(36)}.webp`;
+  // tidak bergantung pada id tulisan, supaya gambar bisa disisipkan sebelum tulisan barunya disimpan
+  const path = `posts/isi/${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}.webp`;
   const { error } = await supabase.storage
     .from("covers")
     .upload(path, result.buffer, { contentType: "image/webp", cacheControl: "31536000" });
