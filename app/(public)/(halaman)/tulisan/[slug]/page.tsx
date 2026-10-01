@@ -34,7 +34,8 @@ export async function generateMetadata({ params }: PageProps<"/tulisan/[slug]">)
       title: post.title,
       description: post.excerpt,
       publishedTime: post.publishedAt,
-      images: post.cover ? [{ url: post.cover }] : undefined,
+      // gambar pratinjau saat tautannya dibagikan: kartu judul 1200 x 630 buatan /api/share
+      images: [{ url: `/api/share/${post.slug}?jenis=og`, width: 1200, height: 630 }],
     },
   };
 }

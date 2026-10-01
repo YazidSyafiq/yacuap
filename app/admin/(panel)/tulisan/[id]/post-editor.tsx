@@ -476,6 +476,11 @@ export function PostEditor({ post, tags, tracks }: { post: EditorPost; tags: Edi
             Pratinjau
             <EyeIcon className="size-4" />
           </button>
+          {postId ? (
+            <Link href={`/admin/tulisan/${postId}/bagikan`} className="font-semibold text-ink hover:underline">
+              Bagikan
+            </Link>
+          ) : null}
           {published ? (
             <a href={`/tulisan/${slug}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 font-semibold text-ink hover:underline">
               Lihat di situs

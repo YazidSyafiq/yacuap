@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useState } from "react";
-import { ArchiveIcon, EyeIcon, PenIcon, PublishIcon, SearchIcon, TrashIcon } from "@/components/admin/icons";
+import { ArchiveIcon, EyeIcon, PenIcon, PublishIcon, SearchIcon, ShareIcon, TrashIcon } from "@/components/admin/icons";
 import { Modal } from "@/components/admin/modal";
 import { AdminPageHeader } from "@/components/admin/page-header";
 import { Button, buttonClass } from "@/components/ui/button";
@@ -144,6 +144,11 @@ function PostCard({ post, onStatus, onDelete }: { post: PostItem; onStatus: () =
           >
             {post.published ? <ArchiveIcon className="size-[18px]" /> : <PublishIcon className="size-[18px]" />}
           </button>
+          {post.published ? (
+            <Link href={`/admin/tulisan/${post.id}/bagikan`} aria-label="Kartu bagikan" title="Kartu bagikan" className={iconButton}>
+              <ShareIcon className="size-[18px]" />
+            </Link>
+          ) : null}
           {post.published ? (
             <Link href={`/tulisan/${post.slug}`} target="_blank" rel="noopener noreferrer" aria-label="Lihat di situs" title="Lihat di situs" className={iconButton}>
               <EyeIcon className="size-[18px]" />

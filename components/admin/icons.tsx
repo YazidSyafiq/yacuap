@@ -217,3 +217,19 @@ export const BackIcon = (props: IconProps) => (
     <path d="M19 12H5M11 6l-6 6 6 6" />
   </Base>
 );
+
+export const ShareIcon = (props: IconProps) => (
+  <Base {...props}>
+    <circle cx="17.5" cy="5.5" r="2.5" />
+    <circle cx="6.5" cy="12" r="2.5" />
+    <circle cx="17.5" cy="18.5" r="2.5" />
+    <path d="M8.7 10.8l6.6-4M8.7 13.2l6.6 4" />
+  </Base>
+);
+
+export const DownloadIcon = (props: IconProps) => (
+  <Base {...props}>
+    <path d="M12 4v11M7.5 10.5L12 15l4.5-4.5" />
+    <path d="M4.5 16v2.5A1.5 1.5 0 0 0 6 20h12a1.5 1.5 0 0 0 1.5-1.5V16" />
+  </Base>
+);
