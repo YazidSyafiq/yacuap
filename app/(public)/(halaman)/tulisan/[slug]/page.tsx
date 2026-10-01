@@ -6,6 +6,7 @@ import { AuthorPhoto } from "@/components/site/author-photo";
 import { Comments, type CommentItem } from "@/components/site/comments";
 import { PostRow, PostTags } from "@/components/site/post-cards";
 import { StoryBody } from "@/components/site/story-body";
+import { ViewPing } from "@/components/site/view-ping";
 import { ReadColumn } from "@/components/ui/container";
 import { getComments } from "@/lib/comments";
 import { getPost, getPosts, postMeta } from "@/lib/posts";
@@ -57,6 +58,8 @@ export default async function ReadPage({ params }: PageProps<"/tulisan/[slug]">)
 
   return (
     <ReadColumn className="py-10 md:py-14">
+      {/* mencatat satu kali baca untuk statistik dashboard */}
+      <ViewPing slug={post.slug} />
       <article>
         <header className="flex flex-col gap-5">
           <PostTags tags={post.tags} />

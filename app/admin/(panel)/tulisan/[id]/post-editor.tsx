@@ -626,7 +626,7 @@ export function PostEditor({ post, tags, tracks }: { post: EditorPost; tags: Edi
                       <label
                         key={tag.id}
                         className={cn(
-                          "flex h-8 min-w-0 cursor-pointer select-none items-center gap-1 rounded-full border px-2 text-[13px] font-medium transition-colors has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-ink",
+                          "flex h-8 min-w-0 cursor-pointer select-none items-center justify-center gap-1 rounded-full border px-2 text-[13px] font-medium transition-colors has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-ink",
                           checked ? "border-ink bg-ink text-surface" : "border-border-strong bg-surface text-ink hover:border-ink",
                         )}
                       >
