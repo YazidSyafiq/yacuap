@@ -24,6 +24,7 @@ export function Modal({
   note,
   danger = false,
   footer,
+  size = "md",
   children,
   className,
 }: {
@@ -35,6 +36,8 @@ export function Modal({
   note?: string;
   danger?: boolean;
   footer?: React.ReactNode;
+  /** Lebar pop up: `md` untuk formulir pendek, `lg` untuk dua kolom, `xl` untuk pratinjau selebar kolom baca. */
+  size?: "md" | "lg" | "xl";
   children: React.ReactNode;
   className?: string;
 }) {
@@ -60,7 +63,8 @@ export function Modal({
       }}
       className={cn(
         // tinggi dibatasi setinggi layar dan isinya bisa digulir, untuk HP pendek dan saat keyboard terbuka
-        "m-auto max-h-[calc(100svh-2rem)] w-[calc(100%-2rem)] max-w-md overflow-y-auto rounded-2xl border border-line bg-surface p-0 text-ink shadow-2xl backdrop:bg-ink/30 backdrop:backdrop-blur-[2px] dark:border-border-strong dark:shadow-[0_0_60px_-10px_rgba(255,255,255,0.2)]",
+        "m-auto max-h-[calc(100svh-2rem)] w-[calc(100%-2rem)] overflow-y-auto rounded-2xl border border-line bg-surface p-0 text-ink shadow-2xl backdrop:bg-ink/30 backdrop:backdrop-blur-[2px] dark:border-border-strong dark:shadow-[0_0_60px_-10px_rgba(255,255,255,0.2)]",
+        size === "xl" ? "max-w-[760px]" : size === "lg" ? "max-w-3xl" : "max-w-md",
         className,
       )}
     >

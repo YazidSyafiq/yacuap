@@ -118,6 +118,16 @@ textarea:-webkit-autofill {
 }
 
 /*
+ * Area tulis (editor, judul, ringkasan) tidak memakai garis fokus: kursornya sendiri sudah jadi penandanya.
+ * Ditulis di sini, bukan lewat kelas Tailwind, karena aturan :focus-visible di atas tidak berada di dalam layer
+ * sehingga selalu menang atas kelas utilitas.
+ */
+.no-focus-ring:focus-visible,
+.tiptap:focus-visible {
+  outline: none;
+}
+
+/*
  * Gambar hitam-putih yang harus ikut tema: logo dan canvas kerumunan.
  * Di mode gelap warnanya dibalik, hitam jadi putih dan sebaliknya.
  */
@@ -462,3 +472,28 @@ textarea:-webkit-autofill {
     }
   }
 }
+
+/* Editor tulisan (Tiptap): tampil persis seperti halaman baca lewat kelas .tulisan; ini hanya tambahan perilakunya. */
+/* Di editor hurufnya sedikit lebih kecil dari halaman baca, supaya lebih banyak tulisan terlihat sekaligus. */
+.tulisan.tiptap {
+  font-size: 1.0625rem;
+  line-height: 1.65;
+}
+
+.tiptap p.is-editor-empty:first-child::before {
+  content: attr(data-placeholder);
+  float: left;
+  height: 0;
+  color: var(--muted);
+  pointer-events: none;
+}
+
+.tiptap img.ProseMirror-selectednode {
+  outline: 3px solid var(--ink);
+  outline-offset: 2px;
+}
+
+.tiptap a {
+  cursor: text;
+}
+

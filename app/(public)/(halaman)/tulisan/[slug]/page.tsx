@@ -3,12 +3,17 @@ import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { AuthorPhoto } from "@/components/site/author-photo";
+import { Comments, type CommentItem } from "@/components/site/comments";
 import { PostRow, PostTags } from "@/components/site/post-cards";
+import { StoryBody } from "@/components/site/story-body";
 import { ReadColumn } from "@/components/ui/container";
+import { getComments } from "@/lib/comments";
 import { getPost, getPosts, postMeta } from "@/lib/posts";
 import { site } from "@/lib/site";
 
 export const revalidate = 300;
+
+const commentDate = new Intl.DateTimeFormat("id-ID", { day: "numeric", month: "short", year: "numeric", timeZone: "Asia/Jakarta" });
 
 // tulisan yang sudah ada dibuat saat build; yang baru terbit dibuat saat pertama dibuka
 export async function generateStaticParams() {
@@ -41,7 +46,14 @@ export default async function ReadPage({ params }: PageProps<"/tulisan/[slug]">)
   const { slug } = await params;
   const post = await getPost(slug);
   if (!post) notFound();
-  const more = (await getPosts()).filter((item) => item.id !== post.id).slice(0, 3);
+  const [others, comments] = await Promise.all([getPosts(), getComments(post.id)]);
+  const more = others.filter((item) => item.id !== post.id).slice(0, 3);
+  const commentItems: CommentItem[] = comments.map((comment) => ({
+    id: comment.id,
+    name: comment.name,
+    body: comment.body,
+    dateLabel: commentDate.format(new Date(comment.createdAt)),
+  }));
 
   return (
     <ReadColumn className="py-10 md:py-14">
@@ -70,9 +82,13 @@ export default async function ReadPage({ params }: PageProps<"/tulisan/[slug]">)
           </div>
         ) : null}
 
-        {/* isi tulisan ditulis penulis sendiri lewat admin dan disimpan sebagai HTML */}
-        <div className="tulisan mt-10 sm:mt-12" dangerouslySetInnerHTML={{ __html: post.html }} />
+        {/* isi tulisan ditulis penulis sendiri lewat admin dan disimpan sebagai HTML; kartu lagunya dihidupkan di sini */}
+        <StoryBody html={post.html} className="mt-10 sm:mt-12" />
       </article>
+
+      <div className="mt-16 sm:mt-20">
+        <Comments postId={post.id} slug={post.slug} comments={commentItems} />
+      </div>
 
       {more.length > 0 ? (
         <section className="mt-16 flex flex-col sm:mt-20">

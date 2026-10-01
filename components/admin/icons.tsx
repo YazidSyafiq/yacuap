@@ -176,3 +176,44 @@ export const NoteIcon = (props: IconProps) => (
     <path d="M8.5 8.5h7M8.5 12h7M8.5 15.5h4" />
   </Base>
 );
+
+export const PublishIcon = (props: IconProps) => (
+  <Base {...props}>
+    <path d="M12 16V5M7.5 9.5L12 5l4.5 4.5" />
+    <path d="M4.5 15v3a1.5 1.5 0 0 0 1.5 1.5h12a1.5 1.5 0 0 0 1.5-1.5v-3" />
+  </Base>
+);
+
+export const ArchiveIcon = (props: IconProps) => (
+  <Base {...props}>
+    <rect x="3.5" y="4.5" width="17" height="4" rx="1" />
+    <path d="M5 8.5v10a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-10M10 12.5h4" />
+  </Base>
+);
+
+export const PlusIcon = (props: IconProps) => (
+  <Base {...props}>
+    <path d="M12 5v14M5 12h14" />
+  </Base>
+);
+
+export const ImageIcon = (props: IconProps) => (
+  <Base {...props}>
+    <rect x="3.5" y="4.5" width="17" height="15" rx="2" />
+    <circle cx="9" cy="10" r="1.6" />
+    <path d="M20 16l-4.5-4.5L7 19" />
+  </Base>
+);
+
+export const LinkIcon = (props: IconProps) => (
+  <Base {...props}>
+    <path d="M10 13.5a4 4 0 0 0 5.7.4l2.5-2.5a4 4 0 0 0-5.7-5.7l-1.3 1.3" />
+    <path d="M14 10.5a4 4 0 0 0-5.7-.4l-2.5 2.5a4 4 0 0 0 5.7 5.7l1.3-1.3" />
+  </Base>
+);
+
+export const BackIcon = (props: IconProps) => (
+  <Base {...props}>
+    <path d="M19 12H5M11 6l-6 6 6 6" />
+  </Base>
+);

@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useState } from "react";
-import { EyeIcon, SearchIcon, TrashIcon } from "@/components/admin/icons";
+import { ArchiveIcon, EyeIcon, PenIcon, PublishIcon, SearchIcon, TrashIcon } from "@/components/admin/icons";
 import { Modal } from "@/components/admin/modal";
 import { AdminPageHeader } from "@/components/admin/page-header";
 import { Button } from "@/components/ui/button";
@@ -11,7 +11,7 @@ import { TagChip } from "@/components/ui/chip";
 import { Input } from "@/components/ui/field";
 import { SubmitButton } from "@/components/ui/submit-button";
 import { cn } from "@/lib/cn";
-import { deletePost, setPostStatus } from "./actions";
+import { createDraft, deletePost, setPostStatus } from "./actions";
 
 export type PostItem = {
   id: string;
@@ -68,7 +68,13 @@ function StatusModal({ post, onClose }: { post: PostItem; onClose: () => void })
       open
       onClose={onClose}
       title={publish ? "Terbitkan Tulisan?" : "Tarik ke Draf?"}
-      note={publish ? "Begitu terbit, tulisannya langsung bisa dibaca semua orang." : "Tulisannya hilang dari situs sampai diterbitkan lagi. Isinya tidak hilang."}
+      note={
+        publish
+          ? post.title
+            ? "Begitu terbit, tulisannya langsung bisa dibaca semua orang."
+            : "Judulnya masih kosong. Isi dulu lewat Ubah sebelum diterbitkan."
+          : "Tulisannya hilang dari situs sampai diterbitkan lagi. Isinya tidak hilang."
+      }
     >
       <form action={setPostStatus} onSubmit={onClose} className="flex flex-col gap-4">
         <input type="hidden" name="id" value={post.id} />
@@ -93,7 +99,7 @@ function DeleteModal({ post, onClose }: { post: PostItem; onClose: () => void })
   );
 }
 
-/** Satu kartu tulisan: cover dengan lencana status, tag, judul, ringkasan, tanggal, lalu tombol-tombol di kaki kartu. */
+/** Satu kartu tulisan: cover dengan lencana status, tag, judul, ringkasan, tanggal, lalu Ubah dan tombol ikon (terbit/draf, lihat, hapus). */
 function PostCard({ post, onStatus, onDelete }: { post: PostItem; onStatus: () => void; onDelete: () => void }) {
   return (
     <li className="flex flex-col overflow-hidden rounded-2xl border border-line bg-surface">
@@ -124,10 +130,20 @@ function PostCard({ post, onStatus, onDelete }: { post: PostItem; onStatus: () =
         <p className="mt-auto pt-1 text-[13px] text-muted">{post.dateLabel}</p>
       </div>
       <div className="flex items-center justify-between gap-2 border-t border-line px-3 py-2">
-        <Button size="sm" variant="secondary" onClick={onStatus}>
-          {post.published ? "Tarik ke Draf" : "Terbitkan"}
-        </Button>
+        <Link href={`/admin/tulisan/${post.id}`} className="flex h-9 items-center gap-2 rounded-lg px-2 text-sm font-medium text-ink hover:bg-bg">
+          <PenIcon className="size-[18px]" />
+          Ubah
+        </Link>
         <div className="flex items-center">
+          <button
+            type="button"
+            onClick={onStatus}
+            aria-label={post.published ? "Tarik ke draf" : "Terbitkan"}
+            title={post.published ? "Tarik ke draf" : "Terbitkan"}
+            className={iconButton}
+          >
+            {post.published ? <ArchiveIcon className="size-[18px]" /> : <PublishIcon className="size-[18px]" />}
+          </button>
           {post.published ? (
             <Link href={`/tulisan/${post.slug}`} target="_blank" rel="noopener noreferrer" aria-label="Lihat di situs" title="Lihat di situs" className={iconButton}>
               <EyeIcon className="size-[18px]" />
@@ -168,6 +184,11 @@ export function PostManager({ posts }: { posts: PostItem[] }) {
       <AdminPageHeader
         title="Tulisan"
         note={`${counts.terbit} terbit, ${counts.draf} draf. Yang terbit langsung bisa dibaca di situs; draf hanya terlihat di sini.`}
+        action={
+          <form action={createDraft}>
+            <SubmitButton block="sm">Tulis Baru</SubmitButton>
+          </form>
+        }
       />
 
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
