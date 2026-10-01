@@ -6,6 +6,7 @@ import { AuthorPhoto } from "@/components/site/author-photo";
 import { Comments, type CommentItem } from "@/components/site/comments";
 import { LikeButton } from "@/components/site/like-button";
 import { PostRow, PostTags } from "@/components/site/post-cards";
+import { ShareLinks } from "@/components/site/share-links";
 import { StoryBody } from "@/components/site/story-body";
 import { ViewPing } from "@/components/site/view-ping";
 import { ReadColumn } from "@/components/ui/container";
@@ -91,12 +92,17 @@ export default async function ReadPage({ params }: PageProps<"/tulisan/[slug]">)
         <StoryBody html={post.html} className="mt-10 sm:mt-12" />
       </article>
 
-      {/* penutup tulisan: tombol Suka di kiri, jalan pintas ke komentar di kanan */}
-      <div className="mt-12 flex flex-wrap items-center justify-between gap-x-6 gap-y-4 border-y border-line py-5 sm:mt-14">
-        <LikeButton slug={post.slug} />
-        <a href="#komentar" className="font-ui text-sm font-medium text-muted hover:text-ink">
-          {comments.length > 0 ? `${comments.length} komentar` : "Tulis komentar"}
-        </a>
+      {/* penutup tulisan: baris pertama tombol Suka dan jalan pintas ke komentar, baris kedua tombol bagikan tautan */}
+      <div className="mt-12 flex flex-col border-y border-line sm:mt-14">
+        <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-4 py-5">
+          <LikeButton slug={post.slug} />
+          <a href="#komentar" className="font-ui text-sm font-medium text-muted hover:text-ink">
+            {comments.length > 0 ? `${comments.length} komentar` : "Tulis komentar"}
+          </a>
+        </div>
+        <div className="border-t border-line py-5">
+          <ShareLinks title={post.title} />
+        </div>
       </div>
 
       <div className="mt-12 sm:mt-14">

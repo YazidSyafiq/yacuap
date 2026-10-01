@@ -61,7 +61,12 @@ export async function SiteFooter() {
                     </span>
                     <span className="flex min-w-0 flex-col">
                       <span className="font-display text-[17px] leading-tight">{social.label}</span>
-                      {social.handle ? <span className="truncate font-ui text-[13px] text-bg/60">@{social.handle}</span> : null}
+                      {/* nomor WhatsApp ditulis apa adanya, tanpa "@" */}
+                      {social.handle ? (
+                        <span className="truncate font-ui text-[13px] text-bg/60">
+                          {social.platform === "whatsapp" ? social.handle : `@${social.handle}`}
+                        </span>
+                      ) : null}
                     </span>
                   </a>
                 </li>
