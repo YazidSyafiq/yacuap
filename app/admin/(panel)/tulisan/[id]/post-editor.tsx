@@ -35,6 +35,9 @@ export type EditorPost = {
 export type EditorTag = { id: string; name: string; position: number };
 export type EditorTrack = TrackCardAttrs;
 
+/** Penanda bahwa yang memicu pop up keluar adalah tombol mundur, bukan tautan. */
+const BACK = "__mundur__";
+
 function slugify(value: string) {
   return value
     .normalize("NFKD")
@@ -291,6 +294,10 @@ export function PostEditor({ post, tags, tracks }: { post: EditorPost; tags: Edi
   // `dirty` hanya penanda ada perubahan yang belum disimpan (React tidak merender ulang kalau nilainya sama).
   const [dirty, setDirty] = useState(false);
   const [saving, startSaving] = useTransition();
+  // true setelah pengguna memutuskan keluar, supaya penjaga tombol mundur tidak mencegat lagi
+  const leavingRef = useRef(false);
+  // jumlah entri riwayat penjaga yang sudah dipasang di halaman ini
+  const guardCountRef = useRef(0);
   const formRef = useRef<HTMLFormElement>(null);
   const imageInputRef = useRef<HTMLInputElement>(null);
   const coverInputRef = useRef<HTMLInputElement>(null);
@@ -320,7 +327,8 @@ export function PostEditor({ post, tags, tracks }: { post: EditorPost; tags: Edi
 
   // Selama ada perubahan yang belum disimpan:
   // - menutup atau memuat ulang halaman memunculkan peringatan bawaan browser;
-  // - mengklik tautan mana pun di halaman (Kembali, menu sidebar, dan lainnya) dicegat dulu dengan pop up konfirmasi.
+  // - mengklik tautan mana pun di halaman (Kembali, menu sidebar, dan lainnya) dicegat dulu dengan pop up konfirmasi;
+  // - tombol mundur di HP atau browser juga dicegat dengan pop up yang sama.
   useEffect(() => {
     if (!dirty) return;
     const warn = (event: BeforeUnloadEvent) => event.preventDefault();
@@ -333,13 +341,33 @@ export function PostEditor({ post, tags, tracks }: { post: EditorPost; tags: Edi
       event.stopPropagation();
       setLeaveHref(anchor.pathname + anchor.search + anchor.hash);
     };
+    // Tombol mundur (di HP maupun browser): halaman tidak bisa menahannya langsung, jadi dipasang satu entri riwayat
+    // tambahan dengan alamat yang sama. Mundur pertama hanya "memakan" entri itu (halaman tidak berpindah),
+    // lalu entri dipasang lagi dan pop up konfirmasi ditampilkan.
+    window.history.pushState(null, "", window.location.href);
+    guardCountRef.current += 1;
+    const onBack = () => {
+      if (leavingRef.current) return;
+      window.history.pushState(null, "", window.location.href);
+      setLeaveHref(BACK);
+    };
     window.addEventListener("beforeunload", warn);
+    window.addEventListener("popstate", onBack);
     document.addEventListener("click", intercept, true);
     return () => {
       window.removeEventListener("beforeunload", warn);
+      window.removeEventListener("popstate", onBack);
       document.removeEventListener("click", intercept, true);
     };
   }, [dirty]);
+
+  /** Meninggalkan halaman setelah dikonfirmasi: ke alamat yang diklik, atau mundur kalau asalnya tombol mundur. */
+  const leave = (target: string) => {
+    leavingRef.current = true;
+    // mundur melewati semua entri penjaga (satu per sesi mengubah-lalu-menyimpan), lalu keluar dari editor
+    if (target === BACK) window.history.go(-(guardCountRef.current + 1));
+    else router.push(target);
+  };
 
   /**
    * Menyimpan lewat tombol: tulisannya dulu (untuk tulisan baru, di sinilah barisnya dibuat), lalu cover kalau
@@ -667,7 +695,7 @@ export function PostEditor({ post, tags, tracks }: { post: EditorPost; tags: Edi
               disabled={saving}
               onClick={() => {
                 const target = leaveHref;
-                save(published, () => router.push(target));
+                save(published, () => leave(target));
               }}
             >
               {saving ? "Menyimpan..." : published ? "Simpan & Keluar" : "Simpan Draf & Keluar"}
@@ -678,9 +706,8 @@ export function PostEditor({ post, tags, tracks }: { post: EditorPost; tags: Edi
               disabled={saving}
               onClick={() => {
                 const target = leaveHref;
-                setDirty(false);
                 setLeaveHref(null);
-                router.push(target);
+                leave(target);
               }}
             >
               Keluar Tanpa Menyimpan
