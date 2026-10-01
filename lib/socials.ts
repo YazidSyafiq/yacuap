@@ -1,10 +1,13 @@
 import "server-only";
-import { platformLabel } from "@/lib/platforms";
+import { PLATFORMS, platformLabel } from "@/lib/platforms";
 import { socials as fallbackSocials } from "@/lib/site";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { createPublicClient } from "@/lib/supabase/public";
 
-export type Social = { label: string; handle: string; url: string };
+/** `platform` menentukan ikonnya di footer; yang tidak dikenal jadi "lainnya". */
+export type Social = { platform: string; label: string; handle: string; url: string };
+
+const platformOf = (label: string) => PLATFORMS.find((item) => item.label.toLowerCase() === label.toLowerCase())?.key ?? "lainnya";
 
 type Item = { platform?: string; label?: string; username?: string; url?: string };
 
@@ -14,7 +17,7 @@ type Item = { platform?: string; label?: string; username?: string; url?: string
  * Hanya yang tautannya terisi yang dikembalikan. Kalau gagal, pakai daftar di lib/site.ts.
  */
 export async function getSocials(): Promise<Social[]> {
-  const fallback = fallbackSocials.filter((social) => social.url);
+  const fallback = fallbackSocials.filter((social) => social.url).map((social) => ({ ...social, platform: platformOf(social.label) }));
   if (!isSupabaseConfigured()) return fallback;
   try {
     const { data, error } = await createPublicClient().rpc("site_socials");
@@ -22,6 +25,7 @@ export async function getSocials(): Promise<Social[]> {
     return (data as Item[])
       .filter((item) => item.url)
       .map((item) => ({
+        platform: item.platform ?? "lainnya",
         label: item.label || platformLabel(item.platform ?? ""),
         handle: item.username ?? "",
         url: item.url ?? "",

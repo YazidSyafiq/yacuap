@@ -6,6 +6,7 @@ export const PLATFORMS = [
   { key: "x", label: "X", urlHint: "https://x.com/namaakun" },
   { key: "threads", label: "Threads", urlHint: "https://www.threads.net/@namaakun" },
   { key: "facebook", label: "Facebook", urlHint: "https://www.facebook.com/namaakun" },
+  { key: "linkedin", label: "LinkedIn", urlHint: "https://www.linkedin.com/in/namaakun" },
   { key: "spotify", label: "Spotify", urlHint: "https://open.spotify.com/user/namaakun" },
   { key: "lainnya", label: "Lainnya", urlHint: "https://..." },
 ] as const;
