@@ -15,7 +15,7 @@ import { shareSequence, type ShareBlock, type SharePost, type ShareRatio } from 
  */
 
 const INK = "#111111";
-const BG = "#f4f4f4";
+const BG = "#ffffff";
 const MUTED = "#6a6a6a";
 const LINE = "#dcdcdc";
 
@@ -155,8 +155,11 @@ function TitleCard({ post, frame, cover, logo, mark }: { post: SharePost; frame:
   );
 }
 
-/** Kartu kutipan: tanda kutip besar, kutipan andalan miring, garis aksen, lalu judul tulisannya. */
-function QuoteCard({ post, quote, frame, logo }: { post: SharePost; quote: string; frame: Frame; logo: string }) {
+/**
+ * Kartu kutipan: tanda kutip besar, kutipan miring, garis aksen, lalu judul tulisan asalnya.
+ * Dipakai juga untuk ocehan: labelnya "Ocehan" dan tanpa baris "dari", karena ocehan berdiri sendiri.
+ */
+function QuoteCard({ quote, label, source, frame, logo }: { quote: string; label: string | null; source: string | null; frame: Frame; logo: string }) {
   const quoteSize = quote.length > 150 ? 58 : quote.length > 100 ? 66 : frame.tall ? 78 : 72;
   return (
     <div
@@ -173,16 +176,18 @@ function QuoteCard({ post, quote, frame, logo }: { post: SharePost; quote: strin
     >
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
         <Logo src={logo} height={57} />
-        {post.tag ? <Chip label={post.tag} /> : null}
+        {label ? <Chip label={label} /> : null}
       </div>
       <div style={{ display: "flex", flexDirection: "column", gap: 40 }}>
         <div style={{ display: "flex", fontFamily: "Fraunces", fontWeight: 500, fontSize: frame.tall ? 180 : 160, lineHeight: 0.6, color: LINE }}>“</div>
         <div style={{ display: "flex", fontFamily: "Fraunces", fontStyle: "italic", fontWeight: 400, fontSize: quoteSize, lineHeight: 1.25 }}>{quote}</div>
         <div style={{ display: "flex", width: 96, height: 3, background: INK }} />
-        <div style={{ display: "flex", flexWrap: "wrap", fontFamily: "Newsreader", fontSize: 34, lineHeight: 1.4, color: MUTED }}>
-          <span style={{ marginRight: 10 }}>dari</span>
-          <span style={{ color: INK }}>{fitTitle(post.title, 34).text}</span>
-        </div>
+        {source ? (
+          <div style={{ display: "flex", flexWrap: "wrap", fontFamily: "Newsreader", fontSize: 34, lineHeight: 1.4, color: MUTED }}>
+            <span style={{ marginRight: 10 }}>dari</span>
+            <span style={{ color: INK }}>{fitTitle(source, 34).text}</span>
+          </div>
+        ) : null}
       </div>
       <div style={{ display: "flex", fontFamily: "Instrument Sans", fontWeight: 500, fontSize: 28, color: MUTED }}>Ditulis {site.author}</div>
     </div>
@@ -331,7 +336,7 @@ export async function renderShare(post: SharePost, kind: ShareKind, ratio: Share
   }
 
   if (item.type === "quote") {
-    return new ImageResponse(<QuoteCard post={post} quote={item.text} frame={frame} logo={logo} />, { ...size, fonts });
+    return new ImageResponse(<QuoteCard quote={item.text} label={post.tag} source={post.title} frame={frame} logo={logo} />, { ...size, fonts });
   }
 
   if (item.type === "closing") {
@@ -356,4 +361,12 @@ export async function renderShare(post: SharePost, kind: ShareKind, ratio: Share
     ),
     { ...size, fonts },
   );
+}
+
+/** Kartu satu ocehan, bergaya kartu kutipan. */
+export async function renderQuip(text: string, ratio: ShareRatio) {
+  const [fonts, logo] = await Promise.all([fontsPromise, logoPromise]);
+  const size = SIZES[ratio];
+  const frame: Frame = { ...size, tall: ratio === "9x16" };
+  return new ImageResponse(<QuoteCard quote={text} label="Ocehan" source={null} frame={frame} logo={logo} />, { ...size, fonts });
 }

@@ -1,10 +1,10 @@
 "use client";
 
 import { useActionState, useState } from "react";
-import { PenIcon, SearchIcon, TrashIcon } from "@/components/admin/icons";
+import { DownloadIcon, PenIcon, SearchIcon, ShareIcon, TrashIcon } from "@/components/admin/icons";
 import { Modal } from "@/components/admin/modal";
 import { AdminPageHeader } from "@/components/admin/page-header";
-import { Button } from "@/components/ui/button";
+import { Button, buttonClass } from "@/components/ui/button";
 import { Input, Label, Textarea } from "@/components/ui/field";
 import { FormError } from "@/components/ui/form-error";
 import { SubmitButton } from "@/components/ui/submit-button";
@@ -87,13 +87,66 @@ function DeleteModal({ quip, onClose }: { quip: Quip; onClose: () => void }) {
   );
 }
 
+const RATIOS = [
+  { key: "4x5", label: "Instagram", platform: "instagram" },
+  { key: "9x16", label: "TikTok & Story", platform: "tiktok" },
+] as const;
+
+/** Pop up kartu bagikan sebuah ocehan: pilih ukuran, lihat pratinjaunya, lalu unduh gambarnya. */
+function ShareModal({ quip, onClose }: { quip: Quip; onClose: () => void }) {
+  const [ratioKey, setRatioKey] = useState<(typeof RATIOS)[number]["key"]>("4x5");
+  const ratio = RATIOS.find((item) => item.key === ratioKey) ?? RATIOS[0];
+  // isi ocehan ikut di alamat gambar, supaya pratinjau berganti setelah ocehannya diubah
+  const src = `/api/ocehan/${quip.id}?rasio=${ratio.key}&v=${encodeURIComponent(quip.body.length + quip.body.slice(0, 12))}`;
+
+  return (
+    <Modal open onClose={onClose} title="Bagikan Ocehan" note="Gambarnya dibuat otomatis, tinggal unduh terus unggah.">
+      <div className="flex flex-col items-center gap-4">
+        <div role="group" aria-label="Ukuran gambar" className="flex gap-1 rounded-xl border border-line bg-surface p-1">
+          {RATIOS.map((item) => (
+            <button
+              key={item.key}
+              type="button"
+              aria-pressed={item.key === ratio.key}
+              onClick={() => setRatioKey(item.key)}
+              className={cn(
+                "flex h-9 items-center whitespace-nowrap rounded-lg px-3 text-sm font-medium",
+                item.key === ratio.key ? "bg-ink text-surface" : "text-muted hover:text-ink",
+              )}
+            >
+              {item.label}
+            </button>
+          ))}
+        </div>
+        {/* gambar hasil buatan server, ukurannya sudah final; tidak perlu dioptimalkan lagi */}
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          key={src}
+          src={src}
+          alt={`Kartu ocehan: ${quip.body}`}
+          className={cn("rounded-xl border border-line bg-(--cover)", ratio.key === "9x16" ? "aspect-[9/16] w-[min(100%,220px)]" : "aspect-[4/5] w-[min(100%,300px)]")}
+        />
+        <div className="flex w-full flex-col-reverse gap-2 pt-1 sm:flex-row sm:justify-end">
+          <Button variant="secondary" size="sm" block="sm" onClick={onClose}>
+            Tutup
+          </Button>
+          <a href={src} download={`ocehan-${ratio.platform}-${quip.id.slice(0, 8)}.png`} className={buttonClass("primary", "sm", undefined, "sm")}>
+            <DownloadIcon className="size-4" />
+            Unduh
+          </a>
+        </div>
+      </div>
+    </Modal>
+  );
+}
+
 /**
  * Satu ocehan, sama persis dengan pop up ocehan di beranda (components/site/ocehan-wave.tsx),
  * hanya ukurannya yang diperkecil supaya empat kartu muat sebaris:
  * label "Ocehan" dengan tanda kutip raksasa pudar di belakangnya, teks tebal, garis aksen.
  * Kaki kartu (tanggal, tombol) selalu di bawah, jadi kartu sebaris rata tingginya.
  */
-function QuipCard({ quip, dateLabel, onEdit, onDelete }: { quip: Quip; dateLabel: string; onEdit: () => void; onDelete: () => void }) {
+function QuipCard({ quip, dateLabel, onShare, onEdit, onDelete }: { quip: Quip; dateLabel: string; onShare: () => void; onEdit: () => void; onDelete: () => void }) {
   return (
     <li className="flex flex-col overflow-hidden rounded-2xl border border-line bg-surface">
       <figure className="relative flex-1 overflow-hidden px-4 pb-4 pt-6">
@@ -110,6 +163,15 @@ function QuipCard({ quip, dateLabel, onEdit, onDelete }: { quip: Quip; dateLabel
       <div className="flex items-center justify-between gap-2 border-t border-line px-4 py-2">
         <p className="text-xs text-muted">{dateLabel}</p>
         <div className="-mr-2 flex items-center">
+          <button
+            type="button"
+            onClick={onShare}
+            aria-label="Bagikan ocehan"
+            title="Kartu bagikan"
+            className="flex size-8 items-center justify-center rounded-lg text-muted hover:bg-bg hover:text-ink"
+          >
+            <ShareIcon className="size-4" />
+          </button>
           <button
             type="button"
             onClick={onEdit}
@@ -137,8 +199,8 @@ function QuipCard({ quip, dateLabel, onEdit, onDelete }: { quip: Quip; dateLabel
 /** Seluruh halaman Ocehan: kepala dengan tombol tambah, kotak cari, kisi empat ocehan sebaris, dan pop up tambah/ubah. */
 export function OcehanManager({ quips, dates }: { quips: Quip[]; dates: Record<string, string> }) {
   const [query, setQuery] = useState("");
-  // null: tertutup; { quip: null }: tambah; { quip }: ubah; { quip, remove: true }: konfirmasi hapus
-  const [modal, setModal] = useState<{ quip: Quip | null; remove?: boolean } | null>(null);
+  // null: tertutup; { quip: null }: tambah; { quip }: ubah; { quip, remove: true }: konfirmasi hapus; { quip, share: true }: kartu bagikan
+  const [modal, setModal] = useState<{ quip: Quip | null; remove?: boolean; share?: boolean } | null>(null);
   const needle = query.trim().toLowerCase();
   const shown = needle ? quips.filter((quip) => quip.body.toLowerCase().includes(needle)) : quips;
 
@@ -173,6 +235,7 @@ export function OcehanManager({ quips, dates }: { quips: Quip[]; dates: Record<s
               key={quip.id}
               quip={quip}
               dateLabel={dates[quip.id]}
+              onShare={() => setModal({ quip, share: true })}
               onEdit={() => setModal({ quip })}
               onDelete={() => setModal({ quip, remove: true })}
             />
@@ -183,6 +246,8 @@ export function OcehanManager({ quips, dates }: { quips: Quip[]; dates: Record<s
       {/* key mengikuti ocehan yang dibuka, supaya isian, penghitung, dan pesannya selalu segar */}
       {modal?.remove && modal.quip ? (
         <DeleteModal key={`hapus-${modal.quip.id}`} quip={modal.quip} onClose={() => setModal(null)} />
+      ) : modal?.share && modal.quip ? (
+        <ShareModal key={`bagikan-${modal.quip.id}`} quip={modal.quip} onClose={() => setModal(null)} />
       ) : modal ? (
         <QuipModal key={modal.quip?.id ?? "baru"} quip={modal.quip} open onClose={() => setModal(null)} />
       ) : null}
