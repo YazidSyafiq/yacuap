@@ -879,3 +879,11 @@ Gambar siap unggah untuk Instagram (4:5, 1080 x 1350) dan TikTok atau Story (9:1
 - Admin `/admin/tulisan/[id]/bagikan` (dari ikon bagikan di daftar tulisan atau tautan "Bagikan" di editor): pilihan ukuran (Instagram atau TikTok & Story), keterangan jumlah slide, pratinjau semua kartu dengan tombol unduh satuan, dan tombol "Unduh Semua (zip)". Formulir memilih kutipan dan paragraf pernah dibuat dan dibuang atas permintaan penulis; kolom `posts.pull_quote` dan `posts.share_paragraphs` tidak dipakai.
 - Ocehan juga bisa jadi konten: tiap kartu ocehan di `/admin/ocehan` punya ikon bagikan yang membuka pop up berisi pilihan ukuran (Instagram atau TikTok & Story), pratinjau, dan tombol Unduh. Gambarnya memakai gaya kartu kutipan (`renderQuip` di `lib/share/render.tsx`): label "Ocehan" menggantikan tag, tanpa baris "dari", dan "Ditulis Yazid Syafiq Irsyad" di bawah. Rutenya `/api/ocehan/[id]?rasio=4x5|9x16`, hanya untuk ocehan terbit.
 - Gambar pratinjau tautan (Open Graph) halaman baca memakai `jenis=og` (1200 x 630): judul di kiri, cover di kanan.
+
+### Tombol Suka, 1 Oktober 2026
+
+- Di akhir tiap tulisan, di atas komentar: tombol hati bulat dengan jumlah suka di sebelahnya, dan di sisi kanan jalan pintas ke komentar. Tanpa akun: tiap browser punya penanda acak (uuid di `localStorage`), satu suka per browser per tulisan, dan bisa dibatalkan. Tidak ada data diri yang disimpan.
+- Halaman baca statis, jadi jumlah dan keadaan suka diambil di browser setelah halaman tampil (`components/site/like-button.tsx`). Tampilannya langsung berubah saat ditekan; kalau gagal disimpan, dikembalikan.
+- Data: tabel `post_likes (post_id, visitor, created_at)` (`20261001020000_suka.sql`). Pengunjung tidak bisa membaca atau menulis tabelnya langsung; semuanya lewat fungsi `post_like(post_slug, visitor_id, set_to)` yang mengembalikan `{count, liked}` (`set_to` kosong berarti hanya membaca). Barisnya hanya bisa dibaca admin.
+- Dashboard, kelompok "Seberapa Dibaca": kartu angka jadi enam (tambah "Suka" dan "Respons per 100 baca", yaitu suka ditambah komentar per 100 kali dibaca), dan daftar "Paling Banyak Disukai" di samping yang paling dibaca dan paling dikomentari.
+- Batasnya: karena tanpa akun, orang yang sama bisa menyukai lagi dari browser atau HP lain, dan menghapus data browser membuat sukanya bisa diulang.

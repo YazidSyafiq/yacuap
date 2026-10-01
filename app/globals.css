@@ -220,6 +220,23 @@ textarea:-webkit-autofill {
     }
   }
 
+  /* hati tombol Suka membesar sebentar saat ditekan jadi suka */
+  .like-pop {
+    animation: like-pop 0.35s ease-out;
+  }
+
+  @keyframes like-pop {
+    0% {
+      transform: scale(0.6);
+    }
+    60% {
+      transform: scale(1.25);
+    }
+    100% {
+      transform: scale(1);
+    }
+  }
+
   /*
    * Balon sapaan berulang tiap 7 detik: menyembul dengan sedikit pantulan, bertahan,
    * mengecil hilang, jeda sebentar, lalu menyembul lagi.

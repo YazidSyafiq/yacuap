@@ -4,6 +4,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { AuthorPhoto } from "@/components/site/author-photo";
 import { Comments, type CommentItem } from "@/components/site/comments";
+import { LikeButton } from "@/components/site/like-button";
 import { PostRow, PostTags } from "@/components/site/post-cards";
 import { StoryBody } from "@/components/site/story-body";
 import { ViewPing } from "@/components/site/view-ping";
@@ -90,7 +91,15 @@ export default async function ReadPage({ params }: PageProps<"/tulisan/[slug]">)
         <StoryBody html={post.html} className="mt-10 sm:mt-12" />
       </article>
 
-      <div className="mt-16 sm:mt-20">
+      {/* penutup tulisan: tombol Suka di kiri, jalan pintas ke komentar di kanan */}
+      <div className="mt-12 flex flex-wrap items-center justify-between gap-x-6 gap-y-4 border-y border-line py-5 sm:mt-14">
+        <LikeButton slug={post.slug} />
+        <a href="#komentar" className="font-ui text-sm font-medium text-muted hover:text-ink">
+          {comments.length > 0 ? `${comments.length} komentar` : "Tulis komentar"}
+        </a>
+      </div>
+
+      <div className="mt-12 sm:mt-14">
         <Comments postId={post.id} slug={post.slug} comments={commentItems} />
       </div>
 

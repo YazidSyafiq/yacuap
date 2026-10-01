@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { ActivityStrip, BarList, ColumnChart, DonutChart, MiniCompare, MiniFacts } from "@/components/admin/charts";
-import { CommentIcon, EyeIcon, MusicIcon, PenIcon, QuoteIcon, TagIcon } from "@/components/admin/icons";
+import { CommentIcon, EyeIcon, HeartIcon, MusicIcon, PenIcon, QuoteIcon, TagIcon } from "@/components/admin/icons";
 import { RangeFilter } from "@/components/admin/range-filter";
 import { Card } from "@/components/ui/card";
 import { requireAdmin } from "@/lib/auth";
@@ -192,7 +192,7 @@ export default async function AdminHomePage({ searchParams }: PageProps<"/admin"
   const inRange = (key: string, from = startKey, to = endKey) => key >= from && key <= to;
   const stampKey = (stamp: string) => dayKey(new Date(stamp));
 
-  const [viewsResult, postsResult, commentsResult, tagsResult, tracksResult, quipsResult] = await Promise.all([
+  const [viewsResult, postsResult, commentsResult, tagsResult, tracksResult, quipsResult, likesResult] = await Promise.all([
     // termasuk periode sebelumnya, untuk grafik pembanding di kartu
     supabase.from("post_views").select("post_id, day, views").gte("day", previousStart).lte("day", endKey),
     supabase.from("posts").select("id, title, status, published_at, created_at, content_html, post_tags(tag_id)"),
@@ -200,6 +200,7 @@ export default async function AdminHomePage({ searchParams }: PageProps<"/admin"
     supabase.from("tags").select("id, name").order("position", { ascending: true }),
     supabase.from("tracks").select("created_at"),
     supabase.from("celotehan").select("created_at").limit(5000),
+    supabase.from("post_likes").select("post_id, created_at").limit(10000),
   ]);
   const viewsWide = (viewsResult.data ?? []) as ViewRow[];
   const views = viewsWide.filter((row) => row.day >= startKey);
@@ -208,6 +209,7 @@ export default async function AdminHomePage({ searchParams }: PageProps<"/admin"
   const tags = (tagsResult.data ?? []) as TagRow[];
   const allTracks = (tracksResult.data ?? []) as StampRow[];
   const allQuips = (quipsResult.data ?? []) as StampRow[];
+  const allLikes = (likesResult.data ?? []) as { post_id: string; created_at: string }[];
   const postById = new Map(posts.map((post) => [post.id, post]));
 
   /* ------------------------------ produktivitas ------------------------------ */
@@ -327,6 +329,12 @@ export default async function AdminHomePage({ searchParams }: PageProps<"/admin"
   const viewsLastDay = views.filter((row) => row.day === endKey).reduce((sum, row) => sum + row.views, 0);
   const comments = allComments.filter((comment) => inRange(stampKey(comment.created_at)));
   const commentsBefore = allComments.filter((comment) => before(stampKey(comment.created_at))).length;
+  const likes = allLikes.filter((like) => inRange(stampKey(like.created_at)));
+  const likesBefore = allLikes.filter((like) => before(stampKey(like.created_at))).length;
+  // respons: suka dan komentar per 100 kali dibaca, ukuran kasar seberapa tulisan itu "kena"
+  const responseRate = (reactions: number, viewCount: number) => (viewCount > 0 ? (reactions / viewCount) * 100 : 0);
+  const rate = responseRate(likes.length + comments.length, totalViews);
+  const rateBefore = responseRate(likesBefore + commentsBefore, viewsBefore);
   const busiest = [...views.reduce((map, row) => map.set(row.day, (map.get(row.day) ?? 0) + row.views), new Map<string, number>())].sort((a, b) => b[1] - a[1])[0];
   const postsRead = new Set(views.filter((row) => row.views > 0).map((row) => row.post_id)).size;
   const postsReadBefore = new Set(viewsWide.filter((row) => before(row.day) && row.views > 0).map((row) => row.post_id)).size;
@@ -351,6 +359,8 @@ export default async function AdminHomePage({ searchParams }: PageProps<"/admin"
   for (const row of views) viewsPerPost.set(row.post_id, (viewsPerPost.get(row.post_id) ?? 0) + row.views);
   const commentsPerPost = new Map<string, number>();
   for (const comment of comments) commentsPerPost.set(comment.post_id, (commentsPerPost.get(comment.post_id) ?? 0) + 1);
+  const likesPerPost = new Map<string, number>();
+  for (const like of likes) likesPerPost.set(like.post_id, (likesPerPost.get(like.post_id) ?? 0) + 1);
 
   // tag dari tulisan yang terbit di rentang ini
   const perTag = tags.map((tag) => ({
@@ -461,7 +471,7 @@ export default async function AdminHomePage({ searchParams }: PageProps<"/admin"
       </div>
 
       <GroupTitle title="Seberapa Dibaca" />
-      <div className="grid grid-cols-2 gap-4 xl:grid-cols-4">
+      <div className="grid grid-cols-2 gap-4 lg:grid-cols-3">
         <StatCard label="Dibaca" value={number.format(totalViews)} note={endKey === todayKey ? `${number.format(viewsLastDay)} di antaranya hari ini` : `${number.format(viewsLastDay)} di antaranya pada ${shortDate.format(fromKey(endKey))}`} icon={EyeIcon}>
           <MiniCompare current={totalViews} previous={viewsBefore} />
         </StatCard>
@@ -484,6 +494,17 @@ export default async function AdminHomePage({ searchParams }: PageProps<"/admin"
         <StatCard label="Komentar" value={number.format(comments.length)} note={`dari ${number.format(allComments.length)} komentar seluruhnya`} icon={CommentIcon}>
           <MiniCompare current={comments.length} previous={commentsBefore} />
         </StatCard>
+        <StatCard label="Suka" value={number.format(likes.length)} note={`dari ${number.format(allLikes.length)} suka seluruhnya`} icon={HeartIcon}>
+          <MiniCompare current={likes.length} previous={likesBefore} />
+        </StatCard>
+        <StatCard
+          label="Respons per 100 baca"
+          value={new Intl.NumberFormat("id-ID", { maximumFractionDigits: 1 }).format(rate)}
+          note={totalViews > 0 ? `${number.format(likes.length)} suka dan ${number.format(comments.length)} komentar` : "Belum ada yang tercatat dibaca"}
+          icon={HeartIcon}
+        >
+          <MiniCompare current={rate} previous={rateBefore} digits={1} />
+        </StatCard>
       </div>
       <div className="grid gap-4 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
         <SectionCard title="Dibaca" note={phrase} icon={EyeIcon}>
@@ -505,12 +526,15 @@ export default async function AdminHomePage({ searchParams }: PageProps<"/admin"
           <DonutChart data={perTag} centerLabel="pemakaian tag" empty={`Belum ada tulisan bertag yang terbit dalam ${phrase}.`} />
         </SectionCard>
       </div>
-      <div className="grid gap-4 lg:grid-cols-2">
+      <div className="grid gap-4 lg:grid-cols-3">
         <SectionCard title="Paling Banyak Dibaca" note={phrase} icon={PenIcon}>
           <BarList data={ranking(viewsPerPost)} empty={`Belum ada tulisan yang tercatat dibaca dalam ${phrase}.`} />
         </SectionCard>
         <SectionCard title="Paling Banyak Dikomentari" note={phrase} icon={CommentIcon}>
           <BarList data={ranking(commentsPerPost)} empty={`Belum ada komentar dalam ${phrase}.`} />
+        </SectionCard>
+        <SectionCard title="Paling Banyak Disukai" note={phrase} icon={HeartIcon}>
+          <BarList data={ranking(likesPerPost)} empty={`Belum ada yang suka dalam ${phrase}.`} />
         </SectionCard>
       </div>
     </div>
