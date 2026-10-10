@@ -21,6 +21,8 @@ export type PlayerStatus = "idle" | "loading" | "playing" | "paused" | "error";
 export type PlayerState = {
   queue: PlayerTrack[];
   index: number;
+  /** Asal antrean, misalnya id playlist; null untuk lagu tunggal. Dipakai supaya lagu yang sama di dua playlist tidak tertukar. */
+  queueId: string | null;
   status: PlayerStatus;
   /** Detik yang sudah berjalan dan panjang lagu; 0 selama belum diketahui. */
   position: number;
@@ -60,7 +62,7 @@ declare global {
   }
 }
 
-const EMPTY: PlayerState = { queue: [], index: -1, status: "idle", position: 0, duration: 0 };
+const EMPTY: PlayerState = { queue: [], index: -1, queueId: null, status: "idle", position: 0, duration: 0 };
 
 let state: PlayerState = EMPTY;
 const listeners = new Set<() => void>();
@@ -192,17 +194,20 @@ export function prepare() {
   document.head.appendChild(script);
 }
 
-/** Memutar lagu ke-`index` dari `queue`. Kalau lagu itu yang sedang aktif, jadinya play/jeda. */
-export function play(queue: PlayerTrack[], index: number) {
+/**
+ * Memutar lagu ke-`index` dari `queue`. Kalau lagu itu yang sedang aktif dari antrean yang sama, jadinya play/jeda.
+ * `queueId` menandai asal antreannya (id playlist), supaya tombol di playlist lain tidak ikut berubah.
+ */
+export function play(queue: PlayerTrack[], index: number, queueId: string | null = null) {
   const track = queue[index];
   if (!track) return;
   const current = state.queue[state.index];
-  if (current && current.id === track.id && state.status !== "error") {
-    set({ queue, index });
+  if (current && current.id === track.id && state.queueId === queueId && state.status !== "error") {
+    set({ queue, index, queueId });
     toggle();
     return;
   }
-  set({ queue, index, status: "loading", position: 0, duration: 0 });
+  set({ queue, index, queueId, status: "loading", position: 0, duration: 0 });
   load(track.youtubeId);
 }
 

@@ -10,6 +10,7 @@ import { FormError } from "@/components/ui/form-error";
 import { SubmitButton } from "@/components/ui/submit-button";
 import { cn } from "@/lib/cn";
 import { createQuip, deleteQuip, updateQuip, type FormState } from "./actions";
+import { useRequired } from "@/components/ui/use-required";
 
 const MAX = 140;
 
@@ -24,6 +25,7 @@ function QuipModal({ quip, open, onClose }: { quip: Quip | null; open: boolean; 
     return result;
   }, undefined);
   const editing = Boolean(quip);
+  const required = useRequired({ body: "Ocehannya diisi dulu." });
 
   return (
     <Modal
@@ -32,7 +34,7 @@ function QuipModal({ quip, open, onClose }: { quip: Quip | null; open: boolean; 
       title={editing ? "Ubah Ocehan" : "Tambah Ocehan"}
       note={editing ? "Perubahannya langsung tampil di beranda." : "Sebaris aja, maksimal 140 karakter. Langsung tampil begitu disimpan."}
     >
-      <form action={action} className="flex flex-col gap-3">
+      <form action={action} onSubmit={required.onSubmit} noValidate className="flex flex-col gap-3">
         {quip ? <input type="hidden" name="id" value={quip.id} /> : null}
         <div className="flex flex-col gap-1.5">
           <Label htmlFor="quip-body">Ocehan</Label>
@@ -46,17 +48,19 @@ function QuipModal({ quip, open, onClose }: { quip: Quip | null; open: boolean; 
             defaultValue={quip?.body ?? ""}
             placeholder="Nggak perlu penting, yang penting kepikiran."
             onChange={(event) => setLength(event.target.value.length)}
+            {...required.field("body")}
           />
+          {required.error("body")}
           <p className={cn("text-right text-xs tabular-nums", length > MAX ? "font-semibold text-danger" : "text-muted")}>
             {length}/{MAX}
           </p>
         </div>
         {state?.error ? <FormError>{state.error}</FormError> : null}
-        <div className="flex flex-col-reverse gap-2 pt-1 sm:flex-row sm:justify-end">
-          <Button variant="secondary" size="sm" block="sm" onClick={onClose}>
+        <div className="grid gap-2 pt-1 [grid-template-columns:repeat(auto-fit,minmax(0,1fr))]">
+          <Button variant="secondary" size="sm" block onClick={onClose}>
             Batal
           </Button>
-          <SubmitButton size="sm" block="sm">
+          <SubmitButton size="sm" block>
             {editing ? "Simpan" : "Tambah"}
           </SubmitButton>
         </div>
@@ -74,11 +78,11 @@ function DeleteModal({ quip, onClose }: { quip: Quip; onClose: () => void }) {
         <blockquote className="rounded-xl border border-line bg-bg px-4 py-3 font-display text-[17px] font-semibold leading-snug">
           {quip.body}
         </blockquote>
-        <div className="flex flex-col-reverse gap-2 pt-1 sm:flex-row sm:justify-end">
-          <Button variant="secondary" size="sm" block="sm" onClick={onClose}>
+        <div className="grid gap-2 pt-1 [grid-template-columns:repeat(auto-fit,minmax(0,1fr))]">
+          <Button variant="secondary" size="sm" block onClick={onClose}>
             Batal
           </Button>
-          <SubmitButton variant="danger" size="sm" block="sm">
+          <SubmitButton variant="danger" size="sm" block>
             Hapus
           </SubmitButton>
         </div>
@@ -126,11 +130,11 @@ function ShareModal({ quip, onClose }: { quip: Quip; onClose: () => void }) {
           alt={`Kartu ocehan: ${quip.body}`}
           className={cn("rounded-xl border border-line bg-(--cover)", ratio.key === "9x16" ? "aspect-[9/16] w-[min(100%,220px)]" : "aspect-[4/5] w-[min(100%,300px)]")}
         />
-        <div className="flex w-full flex-col-reverse gap-2 pt-1 sm:flex-row sm:justify-end">
-          <Button variant="secondary" size="sm" block="sm" onClick={onClose}>
+        <div className="grid gap-2 pt-1 [grid-template-columns:repeat(auto-fit,minmax(0,1fr))]">
+          <Button variant="secondary" size="sm" block onClick={onClose}>
             Tutup
           </Button>
-          <a href={src} download={`ocehan-${ratio.platform}-${quip.id.slice(0, 8)}.png`} className={buttonClass("primary", "sm", undefined, "sm")}>
+          <a href={src} download={`ocehan-${ratio.platform}-${quip.id.slice(0, 8)}.png`} className={buttonClass("primary", "sm", undefined, true)}>
             <DownloadIcon className="size-4" />
             Unduh
           </a>

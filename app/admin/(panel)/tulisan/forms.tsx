@@ -35,11 +35,11 @@ const iconButton = "flex size-9 items-center justify-center rounded-lg text-mute
 
 function ModalActions({ onClose, submit, danger = false }: { onClose: () => void; submit: string; danger?: boolean }) {
   return (
-    <div className="flex flex-col-reverse gap-2 pt-1 sm:flex-row sm:justify-end">
-      <Button variant="secondary" size="sm" block="sm" onClick={onClose}>
+    <div className="grid gap-2 pt-1 [grid-template-columns:repeat(auto-fit,minmax(0,1fr))]">
+      <Button variant="secondary" size="sm" block onClick={onClose}>
         Batal
       </Button>
-      <SubmitButton size="sm" block="sm" variant={danger ? "danger" : "primary"}>
+      <SubmitButton size="sm" block variant={danger ? "danger" : "primary"}>
         {submit}
       </SubmitButton>
     </div>

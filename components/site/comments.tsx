@@ -5,6 +5,7 @@ import { Input, Label, Textarea } from "@/components/ui/field";
 import { FormError } from "@/components/ui/form-error";
 import { SubmitButton } from "@/components/ui/submit-button";
 import { createComment } from "@/app/(public)/(halaman)/tulisan/[slug]/actions";
+import { useRequired } from "@/components/ui/use-required";
 
 export type CommentItem = { id: string; name: string; body: string; dateLabel: string };
 
@@ -15,6 +16,7 @@ function initial(name: string) {
 /** Komentar di bawah tulisan: daftar yang sudah ada, lalu formulir. Tanpa akun, langsung tampil. */
 export function Comments({ postId, slug, comments }: { postId: string; slug: string; comments: CommentItem[] }) {
   const [state, action] = useActionState(createComment, undefined);
+  const required = useRequired({ name: "Namanya diisi dulu.", body: "Komentarnya diisi dulu." });
 
   return (
     <section id="komentar" className="flex flex-col gap-8">
@@ -45,7 +47,7 @@ export function Comments({ postId, slug, comments }: { postId: string; slug: str
         </ul>
       )}
 
-      <form action={action} className="relative flex flex-col gap-4 rounded-2xl border border-line bg-surface p-5 sm:p-6">
+      <form action={action} onSubmit={required.onSubmit} noValidate className="relative flex flex-col gap-4 rounded-2xl border border-line bg-surface p-5 sm:p-6">
         <input type="hidden" name="postId" value={postId} />
         <input type="hidden" name="slug" value={slug} />
         {/* jebakan bot: disembunyikan dari manusia, bot biasanya mengisinya */}
@@ -56,11 +58,13 @@ export function Comments({ postId, slug, comments }: { postId: string; slug: str
         <p className="font-display text-xl">Mau komentar?</p>
         <div className="flex flex-col gap-1.5">
           <Label htmlFor="comment-name">Nama</Label>
-          <Input id="comment-name" name="name" required maxLength={60} placeholder="Nama panggilan juga boleh" autoComplete="nickname" />
+          <Input id="comment-name" name="name" required maxLength={60} placeholder="Nama panggilan juga boleh" autoComplete="nickname" {...required.field("name")} />
+          {required.error("name")}
         </div>
         <div className="flex flex-col gap-1.5">
           <Label htmlFor="comment-body">Komentar</Label>
-          <Textarea id="comment-body" name="body" required rows={4} maxLength={2000} placeholder="Tulis aja, nggak perlu akun." />
+          <Textarea id="comment-body" name="body" required rows={4} maxLength={2000} placeholder="Tulis aja, nggak perlu akun." {...required.field("body")} />
+          {required.error("body")}
         </div>
         {state?.error ? <FormError>{state.error}</FormError> : null}
         {state?.ok ? (

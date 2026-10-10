@@ -94,7 +94,7 @@ export function Modal({
       </div>
       <div className="px-5 py-4 sm:px-6 sm:py-5">{children}</div>
       {footer ? (
-        <div className="flex flex-col-reverse gap-2 rounded-b-2xl border-t border-line bg-bg/60 px-5 py-4 sm:flex-row sm:justify-end sm:px-6">
+        <div className="grid gap-2 rounded-b-2xl border-t border-line bg-bg/60 px-5 py-4 [grid-template-columns:repeat(auto-fit,minmax(0,1fr))] sm:px-6">
           {footer}
         </div>
       ) : null}

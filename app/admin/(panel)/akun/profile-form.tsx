@@ -8,6 +8,7 @@ import { SubmitButton } from "@/components/ui/submit-button";
 import { cn } from "@/lib/cn";
 import { PLATFORMS, type PlatformKey, type SocialItem } from "@/lib/platforms";
 import { updateProfile } from "./actions";
+import { useRequired } from "@/components/ui/use-required";
 
 export type ProfileValues = {
   fullName: string;
@@ -56,15 +57,16 @@ export function ProfileForm({ profile }: { profile: ProfileValues }) {
     setSocials((rows) => rows.map((row) => (row.id === id ? { ...row, ...patch } : row)));
   const wrong = (field: string) => state?.field === field;
   const fieldError = (field: string) => (wrong(field) ? <FormError variant="field">{state?.error}</FormError> : null);
+  const required = useRequired({ full_name: "Nama lengkapnya diisi dulu." });
 
   return (
-    <form action={action} className="flex flex-col gap-6">
+    <form action={action} onSubmit={required.onSubmit} noValidate className="flex flex-col gap-6">
       <Group title="Data Diri" note="Nama dan sebutan tampil di halaman ini. Email dipakai buat masuk.">
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="full_name">Nama Lengkap</Label>
-            <Input id="full_name" name="full_name" required maxLength={80} defaultValue={profile.fullName} className={cn(wrong("full_name") && invalidField)} />
-            {fieldError("full_name")}
+            <Input id="full_name" name="full_name" required maxLength={80} defaultValue={profile.fullName} {...required.field("full_name")} className={cn(wrong("full_name") && invalidField, required.field("full_name").className)} />
+            {required.error("full_name") ?? fieldError("full_name")}
           </div>
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="nickname">Nama Panggilan</Label>

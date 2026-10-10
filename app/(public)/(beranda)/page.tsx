@@ -3,12 +3,12 @@ import type { ReactNode } from "react";
 import { Hero } from "@/components/site/hero";
 import { OcehanWave } from "@/components/site/ocehan-wave";
 import { Oknum } from "@/components/site/oknum";
-import { PlaylistShowcase } from "@/components/site/playlist-view";
+import { OtherPlaylists, PlaylistCard, PlaylistShowcase } from "@/components/site/playlist-view";
 import { PostCard, PostRow } from "@/components/site/post-cards";
 import { buttonClass } from "@/components/ui/button";
 import { Container, Eyebrow } from "@/components/ui/container";
 import { getCelotehan } from "@/lib/celotehan";
-import { getPlaylist } from "@/lib/playlist";
+import { getChart, getPlaylists } from "@/lib/playlist";
 import { getPosts } from "@/lib/posts";
 
 // Beranda statis, disegarkan berkala. Saat admin sudah ada, penyegaran dipicu langsung saat menerbitkan.
@@ -71,7 +71,8 @@ function SectionHeading({
 /** Beranda satu halaman: menu di header menggulir ke bagian-bagian di bawah ini. */
 export default async function HomePage() {
   // semua ocehan untuk bagian Ocehan; balon di hero cukup memakai 40 yang terbaru
-  const [celotehan, playlist, posts] = await Promise.all([getCelotehan(500), getPlaylist(), getPosts()]);
+  // chart minggu ini tampil paling depan; playlist-playlist jadi strip di bawahnya
+  const [celotehan, chart, others, posts] = await Promise.all([getCelotehan(500), getChart(), getPlaylists(), getPosts()]);
   const shown = posts.slice(0, HOME_POSTS);
 
   return (
@@ -103,12 +104,13 @@ export default async function HomePage() {
                   </div>
                 ) : null}
               </div>
-              <div className="flex flex-wrap items-center gap-x-5 gap-y-3">
-                <Link href="/tulisan" className={buttonClass("secondary", "md")}>
+              {/* di HP tombolnya selebar layar dan keterangannya di bawah, rata tengah; di layar lebar berdampingan */}
+              <div className="flex flex-col items-center gap-3 sm:flex-row sm:items-center sm:gap-5">
+                <Link href="/tulisan" className={buttonClass("secondary", "md", undefined, "sm")}>
                   Lihat semua tulisannya
                 </Link>
                 {posts.length > HOME_POSTS ? (
-                  <p className="font-ui text-sm text-muted">
+                  <p className="text-center font-ui text-sm text-muted">
                     Ini baru {HOME_POSTS} dari {posts.length} tulisan.
                   </p>
                 ) : null}
@@ -126,19 +128,30 @@ export default async function HomePage() {
       <section id="playlist" className="section-anchor border-t border-line">
         <Container className="flex flex-col gap-8 py-14 md:py-20">
           <SectionHeading
-            label="Playlist"
+            label="Chart minggu ini"
             title="Lagi sering muter ini."
-            note="Tiap lagu ada ceritanya, kenapa bisa sampai masuk sini."
+            note="Chart mingguan, isinya yang paling sering diputar seminggu belakangan. Tiap lagu ada ceritanya."
+            reply="Urutannya jujur, kok."
           />
-          {playlist ? (
-            // di beranda cukup beberapa lagu pertama; daftar lengkapnya di /playlist
-            <PlaylistShowcase playlist={playlist} limit={5} />
+          {chart ? (
+            // di beranda cukup lima teratas; chart lengkapnya di /chart
+            <PlaylistShowcase playlist={chart} limit={5} />
+          ) : others.length > 0 ? (
+            // belum ada chart: playlist yang ada ditampilkan sebagai kisi
+            <ul className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
+              {others.slice(0, 3).map((playlist) => (
+                <li key={playlist.id}>
+                  <PlaylistCard playlist={playlist} />
+                </li>
+              ))}
+            </ul>
           ) : (
             <div className="flex flex-col gap-2 py-4">
               <p className="font-display text-2xl italic">Belum ada lagunya, nih.</p>
               <p className="text-[17px] text-muted">Lagunya lagi dipilih-pilih dulu. Nanti tinggal pencet, langsung bunyi.</p>
             </div>
           )}
+          {chart ? <OtherPlaylists playlists={others} /> : null}
         </Container>
       </section>
 

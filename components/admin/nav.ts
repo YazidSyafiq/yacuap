@@ -1,5 +1,5 @@
 import type { ComponentType } from "react";
-import { DashboardIcon, MusicIcon, PenIcon, QuoteIcon, TagIcon } from "./icons";
+import { ChartIcon, DashboardIcon, MusicIcon, PenIcon, QuoteIcon, TagIcon } from "./icons";
 
 export type NavItem = {
   label: string;
@@ -21,7 +21,13 @@ export const NAV: NavGroup[] = [
       { label: "Tag", href: "/admin/tag", icon: TagIcon },
     ],
   },
-  { label: "Musik", items: [{ label: "Playlist", href: "/admin/playlist", icon: MusicIcon }] },
+  {
+    label: "Musik",
+    items: [
+      { label: "Chart", href: "/admin/chart", icon: ChartIcon },
+      { label: "Playlist", href: "/admin/playlist", icon: MusicIcon },
+    ],
+  },
   { label: "Absurd", items: [{ label: "Ocehan", href: "/admin/ocehan", icon: QuoteIcon }] },
 ];
 

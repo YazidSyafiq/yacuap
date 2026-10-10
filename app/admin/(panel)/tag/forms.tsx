@@ -11,6 +11,7 @@ import { FormError } from "@/components/ui/form-error";
 import { SubmitButton } from "@/components/ui/submit-button";
 import { cn } from "@/lib/cn";
 import { createTag, deleteTag, updateTag, type FormState } from "./actions";
+import { useRequired } from "@/components/ui/use-required";
 
 export type Tag = { id: string; name: string; slug: string; description: string; position: number; count: number };
 
@@ -18,11 +19,11 @@ const iconButton = "flex size-8 items-center justify-center rounded-lg text-mute
 
 function ModalActions({ onClose, submit, danger = false }: { onClose: () => void; submit: string; danger?: boolean }) {
   return (
-    <div className="flex flex-col-reverse gap-2 pt-1 sm:flex-row sm:justify-end">
-      <Button variant="secondary" size="sm" block="sm" onClick={onClose}>
+    <div className="grid gap-2 pt-1 [grid-template-columns:repeat(auto-fit,minmax(0,1fr))]">
+      <Button variant="secondary" size="sm" block onClick={onClose}>
         Batal
       </Button>
-      <SubmitButton size="sm" block="sm" variant={danger ? "danger" : "primary"}>
+      <SubmitButton size="sm" block variant={danger ? "danger" : "primary"}>
         {submit}
       </SubmitButton>
     </div>
@@ -36,6 +37,7 @@ function TagModal({ tag, onClose }: { tag: Tag | null; onClose: () => void }) {
     if (result?.ok) onClose();
     return result;
   }, undefined);
+  const required = useRequired({ name: "Nama tagnya diisi dulu." });
 
   return (
     <Modal
@@ -44,11 +46,12 @@ function TagModal({ tag, onClose }: { tag: Tag | null; onClose: () => void }) {
       title={tag ? "Ubah Tag" : "Tambah Tag"}
       note={tag ? `Alamatnya tetap /${tag.slug} walau namanya diganti, supaya tautan lama tidak putus.` : "Tag baru langsung punya halaman sendiri dan muncul di tab daftar tulisan."}
     >
-      <form action={action} className="flex flex-col gap-4">
+      <form action={action} onSubmit={required.onSubmit} noValidate className="flex flex-col gap-4">
         {tag ? <input type="hidden" name="id" value={tag.id} /> : null}
         <div className="flex flex-col gap-1.5">
           <Label htmlFor="tag-name">Nama Tag</Label>
-          <Input id="tag-name" name="name" required autoFocus maxLength={30} defaultValue={tag?.name ?? ""} placeholder="Misalnya: Jalan-jalan" />
+          <Input id="tag-name" name="name" required autoFocus maxLength={30} defaultValue={tag?.name ?? ""} placeholder="Misalnya: Jalan-jalan" {...required.field("name")} />
+          {required.error("name")}
         </div>
         <div className="flex flex-col gap-1.5">
           <Label htmlFor="tag-description">Keterangan Singkat</Label>

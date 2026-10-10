@@ -6,6 +6,7 @@ import { Modal } from "@/components/admin/modal";
 import { Button } from "@/components/ui/button";
 import { Input, Label } from "@/components/ui/field";
 import { cn } from "@/lib/cn";
+import { useRequired } from "@/components/ui/use-required";
 
 export type RangeOption = { key: string; label: string; href: string };
 
@@ -32,6 +33,7 @@ export function RangeFilter({
 }) {
   const custom = activeKey === "kustom";
   const [open, setOpen] = useState(false);
+  const required = useRequired({ dari: "Tanggal awalnya diisi dulu.", sampai: "Tanggal akhirnya diisi dulu." });
   const item = "flex h-9 flex-1 items-center justify-center whitespace-nowrap rounded-lg px-3 text-sm font-medium lg:flex-none";
 
   return (
@@ -60,23 +62,25 @@ export function RangeFilter({
       {open ? (
         <Modal open onClose={() => setOpen(false)} title="Rentang Kustom" note="Pilih tanggal awal dan akhir. Semua angka dan diagram mengikuti rentang ini.">
           {/* tidak ditutup lewat state saat dikirim: halamannya berpindah sendiri, dan menutup lebih dulu bisa membatalkan pengiriman */}
-          <form method="get" action="/admin" className="flex flex-col gap-4">
+          <form method="get" action="/admin" onSubmit={required.onSubmit} noValidate className="flex flex-col gap-4">
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="flex flex-col gap-1.5">
                 <Label htmlFor="range-from">Dari Tanggal</Label>
-                <Input id="range-from" type="date" name="dari" defaultValue={from} max={max} required />
+                <Input id="range-from" type="date" name="dari" defaultValue={from} max={max} required {...required.field("dari")} />
+                {required.error("dari")}
               </div>
               <div className="flex flex-col gap-1.5">
                 <Label htmlFor="range-to">Sampai Tanggal</Label>
-                <Input id="range-to" type="date" name="sampai" defaultValue={to} max={max} required />
+                <Input id="range-to" type="date" name="sampai" defaultValue={to} max={max} required {...required.field("sampai")} />
+                {required.error("sampai")}
               </div>
             </div>
             <p className="text-[13px] text-muted">Paling panjang dua tahun. Tanggal akhir tidak bisa melewati hari ini.</p>
-            <div className="flex flex-col-reverse gap-2 pt-1 sm:flex-row sm:justify-end">
-              <Button variant="secondary" size="sm" block="sm" onClick={() => setOpen(false)}>
+            <div className="grid gap-2 pt-1 [grid-template-columns:repeat(auto-fit,minmax(0,1fr))]">
+              <Button variant="secondary" size="sm" block onClick={() => setOpen(false)}>
                 Batal
               </Button>
-              <Button type="submit" size="sm" block="sm">
+              <Button type="submit" size="sm" block>
                 Terapkan
               </Button>
             </div>

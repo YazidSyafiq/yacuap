@@ -239,3 +239,18 @@ export const DownloadIcon = (props: IconProps) => (
     <path d="M4.5 16v2.5A1.5 1.5 0 0 0 6 20h12a1.5 1.5 0 0 0 1.5-1.5V16" />
   </Base>
 );
+
+/** Grafik batang naik, untuk menu Chart. */
+export const ChartIcon = (props: IconProps) => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" {...props}>
+    <path d="M4 20h16M6 16v-4M12 16V8M18 16V4" />
+  </svg>
+);
+
+/** Lingkaran dengan huruf i, untuk penjelasan. */
+export const InfoIcon = (props: IconProps) => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" {...props}>
+    <circle cx="12" cy="12" r="9" />
+    <path d="M12 11v5M12 8h.01" />
+  </svg>
+);

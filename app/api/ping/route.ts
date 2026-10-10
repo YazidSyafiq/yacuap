@@ -1,3 +1,4 @@
+import { revalidatePath } from "next/cache";
 import { createPublicClient } from "@/lib/supabase/public";
 
 // selalu dijalankan di server, tidak boleh dibekukan jadi statis: tujuannya memang menyentuh database
@@ -11,5 +12,12 @@ export async function GET() {
   const supabase = createPublicClient();
   const { count, error } = await supabase.from("posts").select("id", { count: "exact", head: true });
   if (error) return Response.json({ ok: false, pesan: error.message }, { status: 500 });
-  return Response.json({ ok: true, tulisan: count ?? 0, pada: new Date().toISOString() }, { headers: { "Cache-Control": "no-store" } });
+  // sekalian memajukan minggu chart kalau rentangnya sudah lewat (fungsi ini tidak berbuat apa-apa kalau belum)
+  const { data: rolled } = await supabase.rpc("chart_rollover");
+  if (rolled) {
+    revalidatePath("/");
+    revalidatePath("/chart");
+    revalidatePath("/playlist");
+  }
+  return Response.json({ ok: true, tulisan: count ?? 0, chartMingguBaru: Boolean(rolled), pada: new Date().toISOString() }, { headers: { "Cache-Control": "no-store" } });
 }
