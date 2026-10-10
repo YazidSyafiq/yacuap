@@ -14,13 +14,13 @@
     -->
     <script>
       // alamat situs yang sedang aktif, tanpa garis miring di akhir; satu-satunya yang diubah saat pindah domain
-      var TUJUAN = "https://yacuap.vercel.app";
+      var TUJUAN = "https://GANTI-DENGAN-ALAMAT-SITUS";
       var cocok = location.pathname.match(/\/r\/([^/?#]+)/);
       var tujuan = cocok ? TUJUAN + "/tulisan/" + cocok[1] : TUJUAN;
       if (TUJUAN.indexOf("GANTI") === -1) location.replace(tujuan);
     </script>
     <style>
-      body { margin: 0; min-height: 100vh; display: flex; align-items: center; justify-content: center; font: 18px/1.5 Georgia, serif; color: #111; background: #fff; }
+      body { margin: 0; min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 0 16px; font: 18px/1.5 Georgia, serif; color: #111; background: #fff; }
       a { color: inherit; }
     </style>
   </head>
