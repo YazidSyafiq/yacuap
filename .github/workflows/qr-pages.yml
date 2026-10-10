@@ -1,0 +1,35 @@
+# Memasang halaman pengalih kode QR (folder qr/) ke GitHub Pages.
+# Sekali saja di GitHub: Settings > Pages > Source pilih "GitHub Actions".
+name: Pengalih QR ke GitHub Pages
+
+on:
+  push:
+    branches: [main]
+    paths: ["qr/**", ".github/workflows/qr-pages.yml"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      # GitHub Pages menyajikan 404.html untuk alamat yang tidak ada, jadi /r/<slug> ditangani file yang sama
+      - run: cp qr/index.html qr/404.html
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: qr
+      - id: deployment
+        uses: actions/deploy-pages@v4

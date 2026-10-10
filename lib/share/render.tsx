@@ -4,7 +4,7 @@ import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import QRCode from "qrcode";
 import sharp from "sharp";
-import { absoluteUrl, site } from "@/lib/site";
+import { qrUrl, site } from "@/lib/site";
 import { shareSequence, type ShareBlock, type SharePost, type ShareRatio } from "./data";
 
 /**
@@ -262,8 +262,8 @@ function TextSlide({ blocks }: { blocks: ShareBlock[] }) {
   );
 }
 
-/** Slide penutup: ajakan membaca langsung di situs, dengan kode QR dan alamat tulisannya. */
-function ClosingSlide({ post, qr, link }: { post: SharePost; qr: string; link: string }) {
+/** Slide penutup: ajakan membaca langsung di situs, dengan kode QR dan arahan ke tautan di bio. Alamat situs sengaja tidak ditulis. */
+function ClosingSlide({ post, qr }: { post: SharePost; qr: string }) {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 40 }}>
       <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
@@ -278,8 +278,8 @@ function ClosingSlide({ post, qr, link }: { post: SharePost; qr: string; link: s
           <img src={qr} alt="" width={300} height={300} />
         </div>
         <div style={{ display: "flex", flexDirection: "column", gap: 14, flex: 1 }}>
-          <div style={{ display: "flex", fontFamily: "Instrument Sans", fontWeight: 600, fontSize: 24, letterSpacing: "0.08em", textTransform: "uppercase", color: MUTED }}>Pindai, atau ketik</div>
-          <div style={{ display: "flex", fontFamily: "Instrument Sans", fontWeight: 600, fontSize: link.length > 60 ? 28 : 34, lineHeight: 1.3, wordBreak: "break-all" }}>{link}</div>
+          <div style={{ display: "flex", fontFamily: "Instrument Sans", fontWeight: 600, fontSize: 24, letterSpacing: "0.08em", textTransform: "uppercase", color: MUTED }}>Pindai kodenya</div>
+          <div style={{ display: "flex", fontFamily: "Instrument Sans", fontWeight: 600, fontSize: 34, lineHeight: 1.3 }}>atau buka webnya lewat tautan di bio.</div>
           <div style={{ display: "flex", fontFamily: "Newsreader", fontStyle: "italic", fontSize: 30, lineHeight: 1.35, color: MUTED }}>{fitTitle(post.title, 30).text}</div>
         </div>
       </div>
@@ -340,13 +340,12 @@ export async function renderShare(post: SharePost, kind: ShareKind, ratio: Share
   }
 
   if (item.type === "closing") {
-    // alamat tulisan untuk kode QR dan teksnya; di kartu ditulis tanpa "https://" supaya ringkas
-    const url = absoluteUrl(`/tulisan/${post.slug}`);
-    const qr = await QRCode.toDataURL(url, { margin: 0, width: 600, errorCorrectionLevel: "M", color: { dark: "#111111", light: "#ffffff" } });
+    // kode QR berisi alamat tetap `<qrBase>/r/<slug>`, bukan domain situs, supaya tetap hidup kalau domain berganti
+    const qr = await QRCode.toDataURL(qrUrl(post.slug), { margin: 0, width: 600, errorCorrectionLevel: "M", color: { dark: "#111111", light: "#ffffff" } });
     return new ImageResponse(
       (
         <SlideShell post={post} frame={frame} logo={logo} index={index} total={total}>
-          <ClosingSlide post={post} qr={qr} link={url.replace(/^https?:\/\//, "")} />
+          <ClosingSlide post={post} qr={qr} />
         </SlideShell>
       ),
       { ...size, fonts },

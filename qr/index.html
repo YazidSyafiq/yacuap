@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="id">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex" />
+    <title>Yacuap</title>
+    <!--
+      Halaman pengalih untuk kode QR di kartu bagikan. Dipasang di GitHub Pages, alamat gratis yang tidak
+      bergantung pada domain situs. Kode QR berisi <alamat halaman ini>/r/<slug>; halaman ini melempar ke
+      <TUJUAN>/tulisan/<slug>. Kalau domain situs berganti, cukup ubah TUJUAN di bawah, semua QR lama tetap hidup.
+      File ini juga disalin menjadi 404.html saat deploy, karena GitHub Pages menyajikan 404.html untuk
+      semua alamat yang tidak ada, termasuk /r/<slug>.
+    -->
+    <script>
+      // alamat situs yang sedang aktif, tanpa garis miring di akhir; satu-satunya yang diubah saat pindah domain
+      var TUJUAN = "https://yacuap.vercel.app";
+      var cocok = location.pathname.match(/\/r\/([^/?#]+)/);
+      var tujuan = cocok ? TUJUAN + "/tulisan/" + cocok[1] : TUJUAN;
+      if (TUJUAN.indexOf("GANTI") === -1) location.replace(tujuan);
+    </script>
+    <style>
+      body { margin: 0; min-height: 100vh; display: flex; align-items: center; justify-content: center; font: 18px/1.5 Georgia, serif; color: #111; background: #fff; }
+      a { color: inherit; }
+    </style>
+  </head>
+  <body>
+    <p>Sebentar, lagi dibuka… Kalau tidak pindah sendiri, <a id="tautan" href="/">buka webnya di sini</a>.</p>
+    <script>
+      document.getElementById("tautan").href = tujuan;
+    </script>
+  </body>
+</html>

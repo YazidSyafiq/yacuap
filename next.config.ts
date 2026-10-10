@@ -6,6 +6,8 @@ const nextConfig: NextConfig = {
     return [
       { source: "/cerita", destination: "/tulisan", permanent: true },
       { source: "/cerita/:slug", destination: "/tulisan/:slug", permanent: true },
+      // alamat pendek yang dipakai kode QR kartu bagikan (lihat `qrBase` di lib/site.ts dan folder qr/)
+      { source: "/r/:slug", destination: "/tulisan/:slug", permanent: false },
     ];
   },
 };
