@@ -4,6 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="robots" content="noindex" />
+    <meta name="color-scheme" content="light dark" />
     <title>Yacuap</title>
     <!--
       Halaman pengalih untuk kode QR di kartu bagikan. Dipasang di GitHub Pages, alamat gratis yang tidak
@@ -11,23 +12,101 @@
       <TUJUAN>/tulisan/<slug>. Kalau domain situs berganti, cukup ubah TUJUAN di bawah, semua QR lama tetap hidup.
       File ini juga disalin menjadi 404.html saat deploy, karena GitHub Pages menyajikan 404.html untuk
       semua alamat yang tidak ada, termasuk /r/<slug>.
+      Gayanya mengikuti situs (app/globals.css dan app/not-found.tsx): monokrom, Fraunces untuk judul,
+      Newsreader untuk teks, Instrument Sans untuk tombol pil 236 x 44. Mode gelap mengikuti sistem.
     -->
     <script>
       // alamat situs yang sedang aktif, tanpa garis miring di akhir; satu-satunya yang diubah saat pindah domain
-      var TUJUAN = "https://yacuap.vercel.app";
+      var TUJUAN = "https://GANTI-DENGAN-ALAMAT-SITUS";
       var cocok = location.pathname.match(/\/r\/([^/?#]+)/);
       var tujuan = cocok ? TUJUAN + "/tulisan/" + cocok[1] : TUJUAN;
       if (TUJUAN.indexOf("GANTI") === -1) location.replace(tujuan);
     </script>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500&family=Instrument+Sans:wght@600&family=Newsreader:opsz@6..72&display=swap"
+    />
     <style>
-      body { margin: 0; min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 0 16px; font: 18px/1.5 Georgia, serif; color: #111; background: #fff; }
-      a { color: inherit; }
+      :root {
+        color-scheme: light;
+        --bg: #f4f4f4;
+        --surface: #ffffff;
+        --ink: #111111;
+        --ink-soft: #2e2e2e;
+        --muted: #6a6a6a;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root {
+          color-scheme: dark;
+          --bg: #121212;
+          --surface: #1c1c1c;
+          --ink: #ededed;
+          --ink-soft: #cfcfcf;
+          --muted: #a0a0a0;
+        }
+        .logo { filter: invert(1); }
+      }
+      * { box-sizing: border-box; }
+      html, body { margin: 0; min-height: 100%; }
+      body {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        min-height: 100vh;
+        padding: 96px 20px;
+        text-align: center;
+        background: var(--bg);
+        color: var(--ink);
+        font-family: Newsreader, Georgia, "Times New Roman", serif;
+        font-size: 18px;
+        line-height: 1.6;
+        -webkit-text-size-adjust: 100%;
+      }
+      .logo { display: block; height: 44px; width: auto; }
+      h1 {
+        margin: 24px 0 0;
+        font-family: Fraunces, Georgia, "Times New Roman", serif;
+        font-weight: 500;
+        font-size: 36px;
+        line-height: 1.15;
+        letter-spacing: -0.01em;
+      }
+      p { max-width: 28rem; margin: 24px 0 0; color: var(--muted); }
+      .tombol {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        height: 44px;
+        width: 236px;
+        max-width: 100%;
+        margin-top: 24px;
+        padding: 0 12px;
+        border-radius: 9999px;
+        background: var(--ink);
+        color: var(--surface);
+        font-family: "Instrument Sans", system-ui, -apple-system, sans-serif;
+        font-weight: 600;
+        font-size: 14px;
+        text-decoration: none;
+        white-space: nowrap;
+        transition: background-color 150ms;
+      }
+      .tombol:hover { background: var(--ink-soft); }
+      .tombol:focus-visible { outline: 2px solid var(--ink); outline-offset: 3px; }
     </style>
   </head>
   <body>
-    <p>Sebentar, lagi dibuka… Kalau tidak pindah sendiri, <a id="tautan" href="/">buka webnya di sini</a>.</p>
+    <img class="logo" src="/yacuap/logo.png" alt="Yacuap" width="130" height="44" />
+    <h1>Sebentar, lagi dibuka…</h1>
+    <p>Kamu lagi diarahkan ke tulisannya. Kalau nggak pindah sendiri, tekan tombol di bawah.</p>
+    <a id="tautan" class="tombol" href="/">Buka webnya</a>
     <script>
       document.getElementById("tautan").href = tujuan;
+      // logo ikut folder ini, jadi alamatnya relatif terhadap halaman apa pun yang sedang dibuka (/r/<slug> juga)
+      document.querySelector(".logo").src = location.pathname.replace(/\/r\/.*$/, "/").replace(/\/?$/, "/") + "logo.png";
     </script>
   </body>
 </html>
