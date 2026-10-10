@@ -603,6 +603,10 @@ Selesai kalau: domain hidup, satu tulisan dan satu playlist terbit di produksi.
 
 ## 10. Konvensi kerja
 
+### Semua data dari Supabase
+
+Keputusan 10 Oktober 2026: semua data situs (tulisan, playlist, ocehan, komentar, suka, profil, media sosial) hanya berasal dari Supabase. Tidak ada data contoh, daftar cadangan, atau isi yang ditanam di kode untuk dipakai saat tabel kosong atau Supabase gagal; dalam keadaan itu halaman menampilkan keterangan kosong. Kalau penulis minta data dummy, masukkan ke tabel Supabase (lewat admin atau `supabase db query --linked`), jangan ke kode. Yang boleh tetap di kode hanya konfigurasi dan copy antarmuka: nama situs dan tagline (`lib/site.ts`), teks hero, judul bagian, bagian Oknumnya, halaman Tentang, daftar platform media sosial yang dikenal (`lib/platforms.ts`), menu. Yang sudah dibersihkan hari itu: seratus ocehan awal (tabel, kode, dan migration pengosong) serta daftar media sosial cadangan di `lib/site.ts`.
+
 ### Git dan GitHub
 
 - Semua commit dan pull request atas nama identitas git Yazid saja (`Yazid Syafiq Irsyad`, `irsyadyazidsyafiq@gmail.com`). Tidak ada trailer `Co-Authored-By` atau catatan "generated with" dari asisten mana pun.
@@ -714,7 +718,7 @@ Menu: "Tulisan", "Playlist", "Ocehan", "Oknumnya", urutannya sama dengan urutan 
 
 Footer selalu berwarna kebalikan dari tema: hitam di mode terang, terang di mode gelap. Dua kolom: merek (logo, keterangan, satu kalimat, hak cipta) dan media sosial "Ketemu di tempat lain". Tidak ada menu dan tidak ada baris kredit di footer.
 
-Media sosial diisi di `socials` dalam `lib/site.ts`. Yang alamatnya masih kosong tidak ditampilkan.
+Media sosial diisi dari halaman Akun Saya di admin (tabel `profiles`), bukan di kode; daftar cadangan `socials` di `lib/site.ts` dihapus 10 Oktober 2026. Yang alamatnya masih kosong tidak ditampilkan.
 
 Tidak ada kewajiban kredit di footer. Animasi kerumunan ditulis sendiri, dan ilustrasi Open Peeps berlisensi CC0 (kredit tidak wajib; tetap disebut di halaman `/tentang` sebagai sopan santun).
 
