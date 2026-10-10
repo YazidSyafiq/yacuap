@@ -17,7 +17,7 @@
     -->
     <script>
       // alamat situs yang sedang aktif, tanpa garis miring di akhir; satu-satunya yang diubah saat pindah domain
-      var TUJUAN = "https://GANTI-DENGAN-ALAMAT-SITUS";
+      var TUJUAN = "https://yacuap.vercel.app";
       var cocok = location.pathname.match(/\/r\/([^/?#]+)/);
       var tujuan = cocok ? TUJUAN + "/tulisan/" + cocok[1] : TUJUAN;
       if (TUJUAN.indexOf("GANTI") === -1) location.replace(tujuan);
