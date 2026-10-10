@@ -507,7 +507,8 @@ function NewsChartPage({ chart, page, pages, artworks, frame, logo }: { chart: C
               <img src={artworks[0] as string} alt="" width={300} height={300} style={{ objectFit: "cover" }} />
             ) : null}
           </div>
-          <div style={{ display: "flex", flexDirection: "column", justifyContent: "center", gap: 10, minWidth: 0, flexGrow: 1 }}>
+          {/* flexBasis 0 wajib: tanpa itu kolom teks mengikuti panjang judul dan meluber keluar halaman */}
+          <div style={{ display: "flex", flexDirection: "column", justifyContent: "center", gap: 10, minWidth: 0, flexGrow: 1, flexBasis: 0 }}>
             <div style={{ display: "flex", ...label }}>{isChart ? `Nomor satu minggu ini, ${movementWords(1, lead.lastPosition)}` : `Lagu pertama, pembuka ${cut(chart.name, 30)}`}</div>
             <div style={{ display: "flex", fontFamily: "Fraunces", fontWeight: 600, fontSize: lead.title.length > 24 ? 42 : 52, lineHeight: 0.98, letterSpacing: "-0.015em" }}>{cut(lead.title, 48)}</div>
             <div style={{ display: "flex", fontFamily: "Newsreader", fontStyle: "italic", fontSize: 24, color: MUTED }}>{cut(lead.artist, 40)}</div>
