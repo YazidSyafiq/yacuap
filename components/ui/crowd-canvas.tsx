@@ -16,14 +16,15 @@ import { cn } from "@/lib/cn";
  * Yang dikerjakan komponen ini:
  * - ukuran orang, balon, dan logo mengikuti lebar layar: besar di monitor, kecil di HP,
  * - langkah: badan naik turun dan sedikit oleng kiri kanan seirama, kecepatan mengikuti tinggi badan,
- * - balon ucapan berbaris di jalur tetap di atas kerumunan,
+ * - balon ucapan menempel tepat di atas kepala orang yang membawanya, dengan ekor ke kepalanya,
  * - satu "tuan rumah" yang diam di depan kerumunan dengan balon logo,
  * - berhenti saat tidak terlihat, dan menghormati prefers-reduced-motion,
  * - ikut mode gelap: sprite sendiri (garis tepi terang) dan balon terang, bukan warna yang dibalik.
  */
 
 /** Potongan sprite: x, y, lebar, tinggi di gambar sumber. */
-type Cell = readonly [sx: number, sy: number, sw: number, sh: number];
+/** Satu sel sprite, plus jarak dari tepi atas sel ke puncak kepala sosoknya (piksel sprite), karena sosok rata bawah dan tingginya beda-beda. */
+type Cell = readonly [sx: number, sy: number, sw: number, sh: number, head: number];
 
 type Walker = {
   cell: Cell;
@@ -38,12 +39,13 @@ type Walker = {
   steps: number;
   /** Langkah per detik. */
   cadence: number;
-  /** Isi balon, atau null kalau tidak sedang ngomong. */
-  text: string | null;
-  textWidth: number;
-  /** Transparansi balon saat ini, 0 sampai 1. Berubah halus. */
-  alpha: number;
-  /** Urutan masuk: yang lebih dulu masuk menang kalau dua balon berebut tempat. */
+  /** Isi balon, sudah dipecah per baris; kosong kalau tidak sedang ngomong. */
+  lines: string[];
+  /** Nomor kalimat di `phrases` yang sedang dibawa, -1 kalau tidak ada. Dipakai supaya kalimat tidak dobel. */
+  phrase: number;
+  bubbleWidth: number;
+  bubbleHeight: number;
+  /** Urutan masuk, untuk pengurutan yang stabil. */
   order: number;
 };
 
@@ -67,11 +69,12 @@ type CrowdCanvasProps = {
   perRow?: number;
   /** Jumlah baris di sprite. */
   rowCount?: number;
-  /** Kalimat yang muncul di balon ucapan. Kosongkan untuk tanpa balon. */
+  /** Kalimat yang muncul di balon ucapan, ditampilkan utuh dan dipecah per baris kalau panjang. Kosongkan untuk tanpa balon. */
   phrases?: readonly string[];
-  /** Kalimat lebih panjang dari ini dipotong dengan elipsis supaya balon tidak memenuhi layar. */
-  maxPhraseLength?: number;
-  /** Peluang seseorang membawa balon, 0 sampai 1. */
+  /**
+   * Peluang seseorang mencoba membawa balon, 0 sampai 1. Balon hanya jadi kalau lintasannya dijamin bebas
+   * tabrakan dari ujung ke ujung, jadi jumlah balon yang tampil dibatasi ruang, bukan angka ini.
+   */
   bubbleChance?: number;
   /** Pengali keramaian. 1 = bawaan, 0.5 = separuhnya. */
   density?: number;
@@ -111,8 +114,7 @@ export function CrowdCanvas({
   perRow = 14,
   rowCount = 6,
   phrases = [],
-  maxPhraseLength = 38,
-  bubbleChance = 0.08,
+  bubbleChance = 0.85,
   density = 1,
   sizeBase = 110,
   sizeByWidth = 0.13,
@@ -160,10 +162,19 @@ export function CrowdCanvas({
       floor: 0,
       depth: 0,
       font: 12,
-      bubbleHeight: 24,
-      lanes: [] as number[],
+      /** Tinggi satu baris teks di balon. */
+      lineHeight: 15,
+      /** Ruang di dalam balon, kiri kanan atas bawah. */
+      bubblePad: 5,
+      /** Lebar teks paling besar sebelum dipecah ke baris berikutnya. */
+      bubbleMaxWidth: 240,
+      /** Jarak dari puncak kepala ke sisi bawah balon: ekor plus celah yang menampung naik turunnya langkah. */
+      bubbleGap: 8,
     };
     const cells: Cell[] = [];
+    /** Separuh sosok yang kepalanya paling tinggi di selnya, dan separuh yang paling rendah; dipakai pembawa balon. */
+    const tallCells: Cell[] = [];
+    const shortCells: Cell[] = [];
     let hostCell: Cell | null = null;
     const walkers: Walker[] = [];
     const hostBox = { x: 0, ground: 0, width: 0, height: 0 };
@@ -176,44 +187,152 @@ export function CrowdCanvas({
 
     const fontCss = () => `600 ${scene.font}px ${fontFamily}`;
 
+    /** Memecah kalimat per kata supaya tiap baris muat di lebar balon. Kata yang kelewat panjang tetap satu baris. */
+    const wrap = (text: string, maxWidth: number) => {
+      ctx.font = fontCss();
+      const lines: string[] = [];
+      let line = "";
+      for (const word of text.split(/\s+/).filter(Boolean)) {
+        const next = line ? `${line} ${word}` : word;
+        if (line && ctx.measureText(next).width > maxWidth) {
+          lines.push(line);
+          line = word;
+        } else {
+          line = next;
+        }
+      }
+      if (line) lines.push(line);
+      return lines;
+    };
+
     // ---------------------------------------------------------------- sprite
     const sliceSheet = () => {
       const width = sheets.light.naturalWidth / perRow;
       const height = sheets.light.naturalHeight / rowCount;
+      // Puncak kepala tiap sosok diukur dari piksel sprite: baris pertama dari atas yang ada tintanya.
+      // Dipakai untuk menempelkan balon tepat di atas kepala, bukan di tepi sel.
+      const probe = document.createElement("canvas");
+      probe.width = width;
+      probe.height = height;
+      const probeCtx = probe.getContext("2d", { willReadFrequently: true });
+      const headOf = (sx: number, sy: number) => {
+        if (!probeCtx) return 0;
+        probeCtx.clearRect(0, 0, width, height);
+        probeCtx.drawImage(sheets.light, sx, sy, width, height, 0, 0, width, height);
+        const alpha = probeCtx.getImageData(0, 0, width, height).data;
+        for (let y = 0; y < height; y++) {
+          for (let x = 0; x < width; x += 2) {
+            if (alpha[(y * width + x) * 4 + 3] > 40) return y;
+          }
+        }
+        return 0;
+      };
       for (let i = 0; i < perRow * rowCount; i++) {
-        const cell: Cell = [(i % perRow) * width, Math.floor(i / perRow) * height, width, height];
+        const sx = (i % perRow) * width;
+        const sy = Math.floor(i / perRow) * height;
+        const cell: Cell = [sx, sy, width, height, headOf(sx, sy)];
         // tuan rumah tidak ikut berjalan, supaya tidak ada kembarannya di kerumunan
         if (i === hostIndex) hostCell = cell;
         else cells.push(cell);
       }
+      const byHead = [...cells].sort((a, b) => a[4] - b[4]);
+      tallCells.push(...byHead.slice(0, Math.ceil(byHead.length / 2)));
+      shortCells.push(...byHead.slice(Math.floor(byHead.length / 2)));
     };
 
     // ---------------------------------------------------------------- orang
+    /** Sisi atas balon seseorang: tepat di atas puncak kepalanya, dengan celah untuk ekor. */
+    const bubbleTop = (walker: Walker, bubbleHeight: number) =>
+      walker.ground - (walker.cell[3] - walker.cell[4]) * scene.cellScale - scene.bubbleGap - bubbleHeight;
+
+    /**
+     * Balon tidak pernah hilang-muncul di tengah layar: ia masuk bersama orangnya dari satu sisi dan keluar
+     * di sisi lain. Supaya itu bisa dijamin, balon hanya diberikan kalau sepanjang lintasannya tidak akan
+     * menabrak balon lain yang sedang ada:
+     * - semua pembawa balon jalannya sama cepat, jadi balon searah menjaga jaraknya; cukup dicek jaraknya sekarang,
+     * - balon berlawanan arah pasti berpapasan, jadi kotaknya harus terpisah secara vertikal. Supaya hampir
+     *   selalu terpisah, pembawa balon ke kanan berdiri di baris paling depan dengan sosok yang lebih pendek
+     *   (kepala paling rendah), dan yang ke kiri di baris paling belakang dengan sosok yang lebih tinggi.
+     */
+    const pathIsClear = (walker: Walker, width: number, height: number) => {
+      const top = bubbleTop(walker, height);
+      if (top < 4) return false;
+      const gap = scene.font * 0.35;
+      for (const other of walkers) {
+        if (other === walker || other.lines.length === 0) continue;
+        const otherTop = bubbleTop(other, other.bubbleHeight);
+        const apartY = top + height + gap <= otherTop || otherTop + other.bubbleHeight + gap <= top;
+        if (apartY) continue;
+        if (other.direction !== walker.direction) return false;
+        const apartX = Math.abs(other.x - walker.x) >= (other.bubbleWidth + width) / 2 + gap;
+        if (!apartX) return false;
+      }
+      return true;
+    };
+
+    /**
+     * Kalimat dibagikan dari satu tumpukan yang dikocok: semua kalimat keluar sekali sebelum ada yang diulang,
+     * dan kalimat yang sedang tampil di balon lain tidak pernah diberikan lagi, jadi tidak ada ocehan dobel di layar.
+     */
+    let deck: number[] = [];
+    const inUse = (index: number) => walkers.some((other) => other.phrase === index);
+    const drawPhrase = () => {
+      for (let tries = 0; tries < phrases.length; tries++) {
+        if (deck.length === 0) {
+          deck = phrases.map((_, i) => i);
+          for (let i = deck.length - 1; i > 0; i--) {
+            const j = pickIndex(i + 1);
+            [deck[i], deck[j]] = [deck[j], deck[i]];
+          }
+        }
+        const index = deck.pop() as number;
+        if (!inUse(index)) return index;
+        deck.unshift(index); // masih tampil: kembalikan ke dasar tumpukan
+      }
+      return -1;
+    };
+
     /** Isi ulang seorang pejalan dengan sosok, arah, kecepatan, dan balon yang baru. */
     const cast = (walker: Walker, atEdge: boolean) => {
-      const pace = between(0.75, 1.3);
+      walker.phrase = -1;
+      const index = phrases.length > 0 && Math.random() < bubbleChance ? drawPhrase() : -1;
+      const phrase = index >= 0 ? phrases[index] : null;
+      // pembawa balon jalannya seragam supaya balon searah tidak pernah saling susul
+      const pace = phrase ? 1 : between(0.75, 1.3);
       const half = (walker.cell[2] * scene.cellScale) / 2;
-      walker.cell = cells[pickIndex(cells.length)];
       walker.direction = Math.random() < 0.5 ? 1 : -1;
+      // calon pembawa balon: ke kanan sosok pendek, ke kiri sosok tinggi (lihat pathIsClear)
+      const pool = phrase ? (walker.direction === 1 ? shortCells : tallCells) : cells;
+      walker.cell = pool[pickIndex(pool.length)];
       walker.speed = scene.peepHeight * WALK_SPEED * pace;
       walker.cadence = (WALK_SPEED * pace) / STRIDE;
       walker.steps = Math.random() * 2;
-      // tersebar dari baris depan sampai belakang, sedikit lebih ramai di depan
-      walker.ground = scene.floor - scene.depth * Math.pow(Math.random(), 1.25);
+      // tersebar dari baris depan sampai belakang, sedikit lebih ramai di depan;
+      // calon pembawa balon ke kanan di baris paling depan, ke kiri di baris paling belakang (lihat pathIsClear)
+      const depth = phrase ? (walker.direction === 1 ? between(0, 0.06) : between(0.94, 1)) : Math.pow(Math.random(), 1.25);
+      walker.ground = scene.floor - scene.depth * depth;
       walker.x = atEdge
         ? walker.direction === 1
           ? -half - between(0, half * 3)
           : view.width + half + between(0, half * 3)
         : between(-half, view.width + half);
       walker.order = arrivals++;
-      walker.alpha = 0;
+      walker.lines = [];
 
-      const phrase = phrases.length > 0 && Math.random() < bubbleChance ? phrases[pickIndex(phrases.length)] : null;
-      walker.text =
-        phrase && phrase.length > maxPhraseLength ? `${phrase.slice(0, maxPhraseLength - 1).trimEnd()}…` : phrase;
-      if (walker.text) {
+      if (phrase) {
+        const lines = wrap(phrase, scene.bubbleMaxWidth);
         ctx.font = fontCss();
-        walker.textWidth = Math.ceil(ctx.measureText(walker.text).width + scene.font * 2);
+        const widest = Math.max(...lines.map((line) => ctx.measureText(line).width));
+        const width = Math.ceil(widest + scene.bubblePad * 2);
+        const height = Math.ceil(lines.length * scene.lineHeight + scene.bubblePad * 2);
+        if (pathIsClear(walker, width, height)) {
+          walker.lines = lines;
+          walker.phrase = index;
+          walker.bubbleWidth = width;
+          walker.bubbleHeight = height;
+        } else {
+          deck.push(index); // tidak jadi dipakai: kembalikan ke atas tumpukan
+        }
       }
     };
 
@@ -228,9 +347,10 @@ export function CrowdCanvas({
           speed: 0,
           steps: 0,
           cadence: 0,
-          text: null,
-          textWidth: 0,
-          alpha: 0,
+          lines: [],
+          phrase: -1,
+          bubbleWidth: 0,
+          bubbleHeight: 0,
           order: 0,
         };
         cast(walker, false);
@@ -276,29 +396,28 @@ export function CrowdCanvas({
       const wanted = clamp(sizeBase + view.width * sizeByWidth, minPeepHeight, maxPeepHeight);
       let peepHeight = Math.min(wanted, view.height * maxHeightFraction);
 
-      // Ruang untuk jalur balon di atas kerumunan. Dua jalur kalau muat tanpa banyak mengecilkan orang,
-      // kalau tidak, satu jalur saja. Tanpa kalimat, tidak perlu ruang.
+      // Ruang di atas kepala baris paling belakang untuk balon paling tinggi beserta ekornya, supaya balon
+      // orang di baris belakang tidak terpotong tepi atas canvas. Tanpa kalimat, tidak perlu ruang.
       const minDepth = 0.14; // baris belakang paling sedikit naik 14% tinggi badan
-      const room = (laneCount: number) => {
+      const room = () => {
         const font = clamp(peepHeight * 0.05, 11, 20);
-        const bubble = Math.round(font * 2);
-        // jarak kepala ke jalur terbawah + jalur-jalurnya + angkatan langkah + ruang napas di tepi atas
-        const reserve =
-          laneCount === 0
-            ? 12
-            : laneCount * bubble + (laneCount - 1) * font * 0.5 + font * 1.1 + peepHeight * 0.03 + font * 1.6;
+        const lineHeight = Math.round(font * 1.3);
+        const pad = Math.round(font * 0.5);
+        const maxWidth = Math.min(view.width - 32, font * 20);
+        // balon paling tinggi di antara semua kalimat, diukur dengan pemecahan baris yang sama
+        scene.font = font;
+        const mostLines = phrases.reduce((most, phrase) => Math.max(most, wrap(phrase, maxWidth).length), 0);
+        const bubble = mostLines * lineHeight + pad * 2;
+        const gap = Math.round(font * 0.9);
+        // balon + ekor dan celah + angkatan langkah + ruang napas di tepi atas
+        const reserve = phrases.length === 0 ? 12 : bubble + gap + peepHeight * 0.03 + font * 1.2;
         const bottomPad = Math.max(10, peepHeight * 0.05);
-        return { font, bubble, reserve, bottomPad, tallest: (view.height - bottomPad - reserve) / (1 + minDepth) };
+        return { font, lineHeight, pad, maxWidth, gap, reserve, bottomPad, tallest: (view.height - bottomPad - reserve) / (1 + minDepth) };
       };
-      let laneCount = phrases.length > 0 ? 2 : 0;
-      let fit = room(laneCount);
-      if (laneCount === 2 && fit.tallest < peepHeight * 0.94) {
-        laneCount = 1;
-        fit = room(laneCount);
-      }
+      let fit = room();
       if (fit.tallest < peepHeight) {
         peepHeight = Math.max(60, fit.tallest);
-        fit = room(laneCount);
+        fit = room();
       }
 
       scene.peepHeight = peepHeight;
@@ -306,13 +425,10 @@ export function CrowdCanvas({
       scene.floor = view.height - fit.bottomPad;
       scene.depth = clamp(view.height - peepHeight - fit.bottomPad - fit.reserve, 0, peepHeight * 0.5);
       scene.font = fit.font;
-      scene.bubbleHeight = fit.bubble;
-      // jalur 0 tepat di atas kepala baris paling belakang, jalur 1 di atasnya
-      const crowdTop = scene.floor - scene.depth - peepHeight * 1.03;
-      scene.lanes = Array.from(
-        { length: laneCount },
-        (_, lane) => crowdTop - fit.font * 1.1 - fit.bubble - lane * (fit.bubble + fit.font * 0.5),
-      );
+      scene.lineHeight = fit.lineHeight;
+      scene.bubblePad = fit.pad;
+      scene.bubbleMaxWidth = fit.maxWidth;
+      scene.bubbleGap = fit.gap;
 
       if (hostCell) {
         const scale = scene.cellScale * 1.12;
@@ -373,7 +489,7 @@ export function CrowdCanvas({
 
     const hostLift = () => (reduceMotion ? 0 : ((Math.sin((clock * Math.PI * 2) / 2.8) + 1) / 2) * hostBox.height * 0.012);
 
-    /** Kotak balon tuan rumah; dipakai juga sebagai area yang harus dihindari balon lain. */
+    /** Kotak balon tuan rumah. */
     const hostBubble = () => {
       if (!hostCell || !ready(mark)) return null;
       const markHeight = clamp(hostBox.height * 0.17, 30, 92);
@@ -404,52 +520,36 @@ export function CrowdCanvas({
     };
 
     /**
-     * Balon berbaris di jalur tetap di atas kerumunan. Yang berjalan ke kanan di jalur bawah,
-     * yang ke kiri di jalur atas, jadi balon yang berpapasan tidak bertabrakan. Kalau dua balon di jalur
-     * yang sama berebut tempat, yang masuk belakangan memudar dulu.
+     * Balon menempel tepat di atas kepala pembawanya, ekornya menunjuk ke kepala. Balon tidak ikut naik turun
+     * langkah supaya tenang dilihat; celah ke kepala sudah menampung naik turunnya. Kalimat ditampilkan utuh,
+     * dipecah per baris. Balon tidak pernah memudar atau disembunyikan di tengah layar: bebas tabrakannya
+     * sudah dijamin saat balon dibagikan (lihat pathIsClear), jadi di sini tinggal digambar. Balon tuan rumah
+     * tidak dihindari: tuan rumah digambar paling akhir, jadi balon lain lewat di belakangnya.
      */
-    const drawBubbles = (dt: number, avoid: ReturnType<typeof hostBubble>) => {
-      if (scene.lanes.length === 0) return;
-      const gap = scene.font * 0.9;
-      const height = scene.bubbleHeight;
-      const taken: Array<{ lane: number; x: number; width: number }> = [];
-      const speakers = walkers.filter((walker) => walker.text).sort((a, b) => a.order - b.order);
-      // mendekati sasaran secara eksponensial, tidak tergantung jumlah frame per detik
-      const ease = dt > 0 ? 1 - Math.exp(-dt * 8) : 1;
+    const drawBubbles = () => {
+      if (phrases.length === 0) return;
+      const speakers = walkers.filter((walker) => walker.lines.length > 0).sort((a, b) => a.order - b.order);
+      ctx.font = fontCss();
+      ctx.textBaseline = "middle";
+      ctx.textAlign = "center";
 
       for (const walker of speakers) {
-        const lane = scene.lanes.length > 1 && walker.direction === -1 ? 1 : 0;
-        const top = scene.lanes[lane];
-        const half = walker.textWidth / 2;
+        const width = walker.bubbleWidth;
+        const height = walker.bubbleHeight;
+        const half = width / 2;
+        if (walker.x + half < 0 || walker.x - half > view.width) continue;
+        const top = bubbleTop(walker, height);
 
-        let shown = walker.x - half >= 8 && walker.x + half <= view.width - 8;
-        if (shown) {
-          shown = !taken.some(
-            (other) => other.lane === lane && Math.abs(other.x - walker.x) < (other.width + walker.textWidth) / 2 + gap,
-          );
-        }
-        if (shown && avoid) {
-          const overlapsX = walker.x + half + gap > avoid.left && walker.x - half - gap < avoid.left + avoid.width;
-          const overlapsY = top + height + gap > avoid.top && top - gap < avoid.top + avoid.height;
-          if (overlapsX && overlapsY) shown = false;
-        }
-        if (shown) taken.push({ lane, x: walker.x, width: walker.textWidth });
-
-        walker.alpha += ((shown ? 1 : 0) - walker.alpha) * ease;
-        if (walker.alpha < 0.03) continue;
-
-        ctx.globalAlpha = walker.alpha;
-        bubbleShape(walker.x - half, top, walker.textWidth, height, walker.x, scene.font * 0.5);
+        bubbleShape(walker.x - half, top, width, height, walker.x, scene.font * 0.5, scene.font);
         ctx.font = fontCss();
         ctx.fillStyle = colors.paper;
-        ctx.textBaseline = "middle";
-        ctx.textAlign = "center";
-        ctx.fillText(walker.text ?? "", walker.x, top + height / 2 + scene.font * 0.06);
-        ctx.globalAlpha = 1;
+        walker.lines.forEach((line, i) => {
+          ctx.fillText(line, walker.x, top + scene.bubblePad + (i + 0.5) * scene.lineHeight + scene.font * 0.06);
+        });
       }
     };
 
-    const paint = (dt: number) => {
+    const paint = () => {
       ctx.setTransform(view.dpr, 0, 0, view.dpr, 0, 0);
       ctx.clearRect(0, 0, view.width, view.height);
 
@@ -466,8 +566,8 @@ export function CrowdCanvas({
       }
 
       // balon digambar setelah semua orang supaya tidak tertutup orang di depannya
+      drawBubbles();
       const box = hostBubble();
-      drawBubbles(dt, box);
 
       // tuan rumah paling akhir: selalu di depan, tidak pernah tertutup
       if (hostCell) {
@@ -485,7 +585,7 @@ export function CrowdCanvas({
       const dt = Math.min(0.05, (now - lastTime) / 1000);
       lastTime = now;
       advance(dt);
-      paint(dt);
+      paint();
       frameId = requestAnimationFrame(frame);
     };
 
@@ -523,12 +623,12 @@ export function CrowdCanvas({
       // sebelum versi gelap selesai dimuat, tetap pakai versi terang supaya tidak kosong
       sheet = dark && ready(sheets.dark) ? sheets.dark : sheets.light;
       mark = dark && ready(marks.dark) ? marks.dark : marks.light;
-      if (!disposed && !playing && view.width > 0) paint(0);
+      if (!disposed && !playing && view.width > 0) paint();
     };
 
     const relayout = () => {
       if (disposed || !measure()) return;
-      paint(0);
+      paint();
       sync();
     };
 
@@ -566,7 +666,7 @@ export function CrowdCanvas({
     sheets.light.src = src;
     if (marks.light && hostBubbleImage) {
       marks.light.onload = () => {
-        if (!disposed && !playing && view.width > 0) paint(0);
+        if (!disposed && !playing && view.width > 0) paint();
       };
       marks.light.src = hostBubbleImage;
     }
@@ -586,7 +686,6 @@ export function CrowdCanvas({
     perRow,
     rowCount,
     phrases,
-    maxPhraseLength,
     bubbleChance,
     density,
     sizeBase,
