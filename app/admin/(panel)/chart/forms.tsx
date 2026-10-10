@@ -5,7 +5,8 @@ import { useState } from "react";
 import { AddTrackModal } from "@/components/admin/add-track-modal";
 import { Modal } from "@/components/admin/modal";
 import { ShareModal } from "@/components/admin/share-modal";
-import { InfoIcon, PlusIcon, ShareIcon } from "@/components/admin/icons";
+import Link from "next/link";
+import { ArchiveIcon, InfoIcon, PlusIcon, ShareIcon } from "@/components/admin/icons";
 import type { TrackOption } from "@/lib/admin/tracks";
 import { CHART_SIZE, chartWeekLabel, daysLeft, isoWeek } from "@/lib/chart";
 import { cn } from "@/lib/cn";
@@ -91,6 +92,9 @@ export function ChartAdmin({ chart, tracks, options }: { chart: ChartInfo; track
           <button type="button" onClick={() => setModal({ kind: "info" })} aria-label="Cara kerja chart" title="Cara kerjanya" className={iconOnDark}>
             <InfoIcon className="size-[18px]" />
           </button>
+          <Link href="/admin/chart/riwayat" aria-label="Riwayat chart" title="Riwayat minggu-minggu sebelumnya" className={iconOnDark}>
+            <ArchiveIcon className="size-[18px]" />
+          </Link>
           <button
             type="button"
             onClick={() => setModal({ kind: "share" })}

@@ -16,6 +16,15 @@ export default function DashboardLoading() {
             </div>
           ))}
         </div>
+        <div className="grid grid-cols-2 gap-4 lg:grid-cols-3">
+          {Array.from({ length: 3 }, (_, i) => (
+            <div key={i} className="flex flex-col gap-3 rounded-2xl border border-line bg-surface p-4 sm:p-5">
+              <Skeleton className="h-4 w-24" />
+              <Skeleton className="h-8 w-20" />
+              <Skeleton className="h-3 w-28" />
+            </div>
+          ))}
+        </div>
         <div className="grid gap-4 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
           <div className="rounded-2xl border border-line bg-surface">
             <div className="border-b border-line px-5 py-4">

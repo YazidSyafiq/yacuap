@@ -1,5 +1,5 @@
 import type { ComponentType } from "react";
-import { ChartIcon, DashboardIcon, MusicIcon, PenIcon, QuoteIcon, TagIcon } from "./icons";
+import { ArchiveIcon, ChartIcon, DashboardIcon, MusicIcon, PenIcon, QuoteIcon, TagIcon } from "./icons";
 
 export type NavItem = {
   label: string;
@@ -24,7 +24,9 @@ export const NAV: NavGroup[] = [
   {
     label: "Musik",
     items: [
-      { label: "Chart", href: "/admin/chart", icon: ChartIcon },
+      // exact: supaya halaman riwayat tidak ikut menyalakan menu Chart
+      { label: "Chart", href: "/admin/chart", icon: ChartIcon, exact: true },
+      { label: "Riwayat Chart", href: "/admin/chart/riwayat", icon: ArchiveIcon },
       { label: "Playlist", href: "/admin/playlist", icon: MusicIcon },
     ],
   },

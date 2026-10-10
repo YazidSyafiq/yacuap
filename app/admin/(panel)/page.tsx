@@ -1,9 +1,10 @@
 import type { Metadata } from "next";
 import { ActivityStrip, BarList, ColumnChart, DonutChart, MiniCompare, MiniFacts } from "@/components/admin/charts";
-import { CommentIcon, EyeIcon, HeartIcon, MusicIcon, PenIcon, QuoteIcon, TagIcon } from "@/components/admin/icons";
+import { ChartIcon, CommentIcon, EyeIcon, HeartIcon, MusicIcon, PenIcon, QuoteIcon, TagIcon } from "@/components/admin/icons";
 import { RangeFilter } from "@/components/admin/range-filter";
 import { Card } from "@/components/ui/card";
 import { requireAdmin } from "@/lib/auth";
+import { CHART_SIZE, daysLeft, isoWeek, movementOf } from "@/lib/chart";
 import { site } from "@/lib/site";
 
 export const metadata: Metadata = { title: "Dashboard" };
@@ -69,6 +70,9 @@ type PostRow = {
 type CommentRow = { id: string; created_at: string; post_id: string };
 type TagRow = { id: string; name: string };
 type StampRow = { created_at: string };
+type ChartTrackRow = { track_id: string; position: number; last_position: number | null; weeks_on_chart: number; added_at: string; tracks: { title: string } | null };
+type PlaylistRow = { id: string; name: string; status: "draft" | "published"; updated_at: string; playlist_tracks: { track_id: string }[] };
+type HistoryRow = { chart_from: string; title: string; weeks_on_chart: number };
 type Bucket = { key: string; label: string; longLabel: string; start: string; end: string };
 
 const fullDate = new Intl.DateTimeFormat("id-ID", { day: "numeric", month: "long", year: "numeric", timeZone: "UTC" });
@@ -192,7 +196,7 @@ export default async function AdminHomePage({ searchParams }: PageProps<"/admin"
   const inRange = (key: string, from = startKey, to = endKey) => key >= from && key <= to;
   const stampKey = (stamp: string) => dayKey(new Date(stamp));
 
-  const [viewsResult, postsResult, commentsResult, tagsResult, tracksResult, quipsResult, likesResult] = await Promise.all([
+  const [viewsResult, postsResult, commentsResult, tagsResult, tracksResult, quipsResult, likesResult, chartResult, chartTracksResult, playlistsResult, historyResult] = await Promise.all([
     // termasuk periode sebelumnya, untuk grafik pembanding di kartu
     supabase.from("post_views").select("post_id, day, views").gte("day", previousStart).lte("day", endKey),
     supabase.from("posts").select("id, title, status, published_at, created_at, content_html, post_tags(tag_id)"),
@@ -201,7 +205,15 @@ export default async function AdminHomePage({ searchParams }: PageProps<"/admin"
     supabase.from("tracks").select("created_at"),
     supabase.from("celotehan").select("created_at").limit(5000),
     supabase.from("post_likes").select("post_id, created_at").limit(10000),
+    supabase.from("chart").select("chart_from, chart_to").maybeSingle(),
+    supabase.from("chart_tracks").select("track_id, position, last_position, weeks_on_chart, added_at, tracks(title)").order("position", { ascending: true }),
+    supabase.from("playlists").select("id, name, status, updated_at, playlist_tracks(track_id)"),
+    supabase.from("chart_history").select("chart_from, title, weeks_on_chart"),
   ]);
+  const chart = (chartResult.data ?? null) as { chart_from: string | null; chart_to: string | null } | null;
+  const chartTracks = (chartTracksResult.data ?? []) as unknown as ChartTrackRow[];
+  const playlists = (playlistsResult.data ?? []) as unknown as PlaylistRow[];
+  const history = (historyResult.data ?? []) as HistoryRow[];
   const viewsWide = (viewsResult.data ?? []) as ViewRow[];
   const views = viewsWide.filter((row) => row.day >= startKey);
   const posts = (postsResult.data ?? []) as unknown as PostRow[];
@@ -248,28 +260,33 @@ export default async function AdminHomePage({ searchParams }: PageProps<"/admin"
     ],
   }));
 
-  // garis waktu: hari mana saja yang ada sesuatu dibuat
-  const madeOn = new Map<string, [number, number, number]>();
-  const mark = (key: string, kind: 0 | 1 | 2) => {
-    const entry = madeOn.get(key) ?? [0, 0, 0];
+  // garis waktu: hari mana saja yang ada sesuatu dibuat atau diubah (tulisan, ocehan, lagu, lagu masuk chart, playlist)
+  type Made = [number, number, number, number, number];
+  const madeOn = new Map<string, Made>();
+  const mark = (key: string, kind: 0 | 1 | 2 | 3 | 4) => {
+    const entry = madeOn.get(key) ?? [0, 0, 0, 0, 0];
     entry[kind] += 1;
     madeOn.set(key, entry);
   };
   published.forEach(({ key }) => mark(key, 0));
   quips.forEach((key) => mark(key, 1));
   tracks.forEach((key) => mark(key, 2));
-  const describe = (entry: [number, number, number]) =>
-    entry[0] + entry[1] + entry[2] === 0
+  chartTracks.map((row) => stampKey(row.added_at)).filter((key) => inRange(key)).forEach((key) => mark(key, 3));
+  playlists.map((row) => stampKey(row.updated_at)).filter((key) => inRange(key)).forEach((key) => mark(key, 4));
+  const describe = (entry: Made) =>
+    entry.reduce((sum, value) => sum + value, 0) === 0
       ? "Nggak bikin apa-apa"
       : [
           [entry[0], "tulisan"],
           [entry[1], "ocehan"],
           [entry[2], "lagu"],
+          [entry[3], "lagu masuk chart"],
+          [entry[4], "playlist diubah"],
         ]
           .flatMap(([value, name]) => (Number(value) > 0 ? [`${number.format(Number(value))} ${name}`] : []))
           .join(", ");
   const sumRange = (from: string, to: string) => {
-    const total: [number, number, number] = [0, 0, 0];
+    const total: Made = [0, 0, 0, 0, 0];
     for (const [key, entry] of madeOn) {
       if (inRange(key, from, to)) entry.forEach((value, i) => (total[i] += value));
     }
@@ -294,7 +311,7 @@ export default async function AdminHomePage({ searchParams }: PageProps<"/admin"
             return {
               key: start,
               label: `${shortDate.format(fromKey(start))} sampai ${shortDate.format(fromKey(end))}`,
-              active: total[0] + total[1] + total[2] > 0,
+              active: total.some((value) => value > 0),
               detail: describe(total),
             };
           }),
@@ -309,7 +326,7 @@ export default async function AdminHomePage({ searchParams }: PageProps<"/admin"
         return [...groups.entries()].map(([monday, keys]) => ({
           key: monday,
           label: shortDay.format(fromKey(keys[0])),
-          days: keys.map((key) => ({ key, label: dayDate.format(fromKey(key)), active: madeOn.has(key), detail: describe(madeOn.get(key) ?? [0, 0, 0]) })),
+          days: keys.map((key) => ({ key, label: dayDate.format(fromKey(key)), active: madeOn.has(key), detail: describe(madeOn.get(key) ?? [0, 0, 0, 0, 0]) })),
         }));
       })();
   const stripLines = strip.flatMap((group) => group.days);
@@ -322,6 +339,25 @@ export default async function AdminHomePage({ searchParams }: PageProps<"/admin"
     { run: 0, best: 0 },
   ).best;
   const lineUnit = byWeek ? "minggu" : "hari";
+
+  /* --------------------------------- musik --------------------------------- */
+  const weekNo = isoWeek(chart?.chart_from ?? null);
+  const left = daysLeft(chart?.chart_to ?? null);
+  const newThisWeek = chartTracks.filter((row) => row.last_position == null).length;
+  // yang naik paling tinggi minggu ini; kalau tidak ada yang naik, lagu di posisi satu
+  const climber = chartTracks
+    .map((row) => ({ row, move: movementOf(row.position, row.last_position) }))
+    .filter(({ move }) => move.kind === "up")
+    .sort((a, b) => (b.move.kind === "up" ? b.move.delta : 0) - (a.move.kind === "up" ? a.move.delta : 0))[0];
+  const topTrack = chartTracks[0];
+  const publishedPlaylists = playlists.filter((row) => row.status === "published");
+  const playlistTracks = playlists.reduce((sum, row) => sum + row.playlist_tracks.length, 0);
+  const latestPlaylist = [...playlists].sort((a, b) => b.updated_at.localeCompare(a.updated_at))[0];
+  const archivedWeeks = new Set(history.map((row) => row.chart_from));
+  const firstArchive = [...archivedWeeks].sort()[0];
+  // lagu yang paling lama bertahan menurut arsip (minggu ke berapa saat itu); kalau arsip masih kosong, dari chart sekarang
+  const longest = [...history].sort((a, b) => b.weeks_on_chart - a.weeks_on_chart)[0];
+  const longestNow = [...chartTracks].sort((a, b) => b.weeks_on_chart - a.weeks_on_chart)[0];
 
   /* -------------------------------- pembaca -------------------------------- */
   const totalViews = views.reduce((sum, row) => sum + row.views, 0);
@@ -468,6 +504,53 @@ export default async function AdminHomePage({ searchParams }: PageProps<"/admin"
             />
           </div>
         </SectionCard>
+      </div>
+
+      <GroupTitle title="Musik" />
+      {/* tiga kartu keadaan sekarang, tidak mengikuti rentang: chart minggu ini, playlist, dan arsip chart */}
+      <div className="grid grid-cols-2 gap-4 lg:grid-cols-3">
+        <StatCard
+          label="Chart minggu ini"
+          value={`${number.format(chartTracks.length)} / ${CHART_SIZE}`}
+          note={weekNo ? `Minggu ke-${weekNo}${left == null ? "" : left === 0 ? ", hari terakhir" : `, ${number.format(left)} hari lagi`}` : "Minggunya belum jalan"}
+          icon={ChartIcon}
+        >
+          <MiniFacts
+            rows={[
+              { label: "Baru masuk", value: `${number.format(newThisWeek)} lagu` },
+              {
+                label: climber ? "Naik paling tinggi" : "Nomor satu",
+                value: climber ? `${climber.row.tracks?.title ?? "Tanpa judul"}, naik ${climber.move.kind === "up" ? climber.move.delta : 0}` : (topTrack?.tracks?.title ?? "-"),
+              },
+            ]}
+          />
+        </StatCard>
+        <StatCard
+          label="Playlist terbit"
+          value={number.format(publishedPlaylists.length)}
+          note={`${number.format(playlists.length - publishedPlaylists.length)} draf, ${number.format(playlistTracks)} lagu di semua playlist`}
+          icon={MusicIcon}
+        >
+          <MiniFacts
+            rows={[
+              { label: "Terakhir diubah", value: latestPlaylist ? latestPlaylist.name : "-" },
+              { label: "Kapan", value: latestPlaylist ? fullDate.format(fromKey(stampKey(latestPlaylist.updated_at))) : "-" },
+            ]}
+          />
+        </StatCard>
+        <StatCard
+          label="Chart terarsip"
+          value={`${number.format(archivedWeeks.size)} minggu`}
+          note={firstArchive ? `Sejak ${fullDate.format(fromKey(firstArchive))}, tiap Senin bertambah` : "Minggu pertama masuk arsip Senin depan"}
+          icon={ChartIcon}
+        >
+          <MiniFacts
+            rows={[
+              { label: "Paling lama bertahan", value: longest ? longest.title : (longestNow?.tracks?.title ?? "-") },
+              { label: "Lamanya", value: longest ? `${number.format(longest.weeks_on_chart)} minggu` : longestNow ? `${number.format(longestNow.weeks_on_chart)} minggu` : "-" },
+            ]}
+          />
+        </StatCard>
       </div>
 
       <GroupTitle title="Seberapa Dibaca" />
