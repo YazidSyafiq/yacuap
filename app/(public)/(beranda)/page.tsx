@@ -156,10 +156,20 @@ export default async function HomePage() {
             reply="Uhuyyy"
           />
         </Container>
-        {/* ocehan mengalir di jalur zigzag, selebar layar; diklik untuk membesar */}
-        <div className="pb-14 pt-10 md:pb-20 md:pt-12">
-          <OcehanWave phrases={celotehan} />
-        </div>
+        {celotehan.length > 0 ? (
+          // ocehan mengalir di jalur zigzag, selebar layar; diklik untuk membesar
+          <div className="pb-14 pt-10 md:pb-20 md:pt-12">
+            <OcehanWave phrases={celotehan} />
+          </div>
+        ) : (
+          // tidak ada data contoh: selama tabel kosong, bagian ini hanya memberi tahu
+          <Container className="pb-14 md:pb-20">
+            <div className="flex flex-col gap-2 py-4">
+              <p className="font-display text-2xl italic">Belum ada ocehan, nih.</p>
+              <p className="text-[17px] text-muted">Belum ada yang nyangkut di kepala. Kalau ada, nongolnya di sini.</p>
+            </div>
+          </Container>
+        )}
       </section>
 
       <Oknum />

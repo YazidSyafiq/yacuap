@@ -1,18 +1,17 @@
 import "server-only";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
-import { OCEHAN_AWAL } from "@/lib/ocehan-awal";
 import { createPublicClient } from "@/lib/supabase/public";
 
 /**
  * Ocehan: tulisan sebaris, pendamping cerita yang panjang.
  * Tampil di bagian Ocehan di beranda dan di balon kerumunan hero.
  *
- * Sumbernya tabel `celotehan`. Selama tabel itu kosong (atau Supabase belum tersambung),
- * dipakai OCEHAN_AWAL: seratus kalimat milik penulis dari docs/ocehan-awal.txt.
+ * Sumbernya hanya tabel `celotehan`. Tidak ada data contoh atau cadangan di kode (dihapus 10 Oktober 2026):
+ * kalau tabelnya kosong, hero tanpa balon dan bagian Ocehan menampilkan keterangan kosong.
  */
-/** Semua ocehan, terbaru dulu. Tidak pernah melempar galat: kalau gagal atau kosong, pakai ocehan awal. */
+/** Semua ocehan terbit, terbaru dulu. Tidak pernah melempar galat: kalau gagal atau kosong, daftar kosong. */
 export async function getCelotehan(limit = 40): Promise<string[]> {
-  if (!isSupabaseConfigured()) return [...OCEHAN_AWAL];
+  if (!isSupabaseConfigured()) return [];
   try {
     const { data, error } = await createPublicClient()
       .from("celotehan")
@@ -20,9 +19,9 @@ export async function getCelotehan(limit = 40): Promise<string[]> {
       .eq("status", "published")
       .order("created_at", { ascending: false })
       .limit(limit);
-    if (error || !data || data.length === 0) return [...OCEHAN_AWAL];
+    if (error || !data) return [];
     return data.map((row) => String(row.body));
   } catch {
-    return [...OCEHAN_AWAL];
+    return [];
   }
 }
